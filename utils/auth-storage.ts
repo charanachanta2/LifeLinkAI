@@ -1,13 +1,15 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
+
+const TOKEN_KEY = "lifelink_auth_token";
 
 export const saveToken = async (token: string) => {
-  await AsyncStorage.setItem("token", token);
+  await SecureStore.setItemAsync(TOKEN_KEY, token);
 };
 
 export const getToken = async () => {
-  return await AsyncStorage.getItem("token");
+  return await SecureStore.getItemAsync(TOKEN_KEY);
 };
 
 export const removeToken = async () => {
-  await AsyncStorage.removeItem("token");
+  await SecureStore.deleteItemAsync(TOKEN_KEY);
 };

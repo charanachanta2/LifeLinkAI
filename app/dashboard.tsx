@@ -9,25 +9,25 @@ import {
 } from "react-native";
 
 import { API } from "@/config/api";
-import { getToken, removeToken } from "@/utils/auth-storage";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Dashboard() {
   const router = useRouter();
+  const { token, user, authHeaders, logout } = useAuth();
 
-  const [name, setName] = useState("");
+  const [name, setName] = useState(user?.name || "");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const token = await getToken();
         if (!token) {
           router.replace("/login");
           return;
         }
 
         const response = await fetch(API.me, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: authHeaders(),
         });
 
         const data = await response.json();
@@ -37,7 +37,7 @@ export default function Dashboard() {
           return;
         }
 
-        setName(data.name || data.user?.name || "");
+        setName(data.user?.name || "");
       } catch (err) {
         // silently fall back to a generic welcome if this fails
       } finally {
@@ -46,10 +46,10 @@ export default function Dashboard() {
     };
 
     fetchUser();
-  }, []);
+  }, [token]);
 
   const handleLogout = async () => {
-    await removeToken();
+    await logout();
     router.replace("/login");
   };
 
