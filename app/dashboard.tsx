@@ -6,12 +6,12 @@ import {
   Text,
   TouchableOpacity,
   View,
-  } from "react-native";
+} from "react-native";
 
 import { API } from "@/config/api";
 import { getToken, removeToken } from "@/utils/auth-storage";
 
-export default function Home() {
+export default function Dashboard() {
   const router = useRouter();
 
   const [name, setName] = useState("");
@@ -112,4 +112,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   logoutText: { color: "#DC2626", fontSize: 16, fontWeight: "600" },
-  });
+});
