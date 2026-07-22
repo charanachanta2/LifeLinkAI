@@ -20,4 +20,6 @@ export const API = {
   login: `${API_BASE_URL}/api/auth/login`,
   googleLogin: `${API_BASE_URL}/api/auth/google-login`,
   me: `${API_BASE_URL}/api/auth/me`,
+  verifyPhone: `${API_BASE_URL}/api/auth/verify-phone`,
+  contacts: `${API_BASE_URL}/api/emergency/contacts`,
 };

@@ -17,6 +17,8 @@ export type AuthUser = {
   name: string;
   username?: string;
   email: string;
+  phone?: string;
+  isPhoneVerified?: boolean;
 };
 
 type AuthContextType = {
@@ -36,6 +38,7 @@ type AuthContextType = {
   googleLogin: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
   authHeaders: () => Record<string, string>;
+  refreshUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -147,6 +150,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [token]
   );
 
+  // Re-fetches the user from /api/auth/me and updates both state + SecureStore.
+  // Call this after anything that changes user fields server-side
+  // (e.g. phone verification) so the rest of the app sees the new data.
+  const refreshUser = useCallback(async () => {
+    if (!token) return;
+    const res = await fetch(`${BASE_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.message || "Failed to refresh user");
+
+    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(body.user));
+    setUser(body.user);
+  }, [token]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -160,6 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         googleLogin,
         logout,
         authHeaders,
+        refreshUser,
       }}
     >
       {children}

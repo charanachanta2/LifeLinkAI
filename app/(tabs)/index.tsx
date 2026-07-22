@@ -1,99 +1,63 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
+  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 
-import { API } from "@/config/api";
 import { useAuth } from "@/context/AuthContext";
 
-export default function Dashboard() {
+export default function Home() {
   const router = useRouter();
-  const { token, user, authHeaders, logout } = useAuth();
-
-  const [name, setName] = useState(user?.name || "");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        if (!token) {
-          router.replace("/login");
-          return;
-        }
-
-        const response = await fetch(API.me, {
-          headers: authHeaders(),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          router.replace("/login");
-          return;
-        }
-
-        setName(data.user?.name || "");
-      } catch (err) {
-        // silently fall back to a generic welcome if this fails
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUser();
-  }, [token]);
-
-  const handleLogout = async () => {
-    await logout();
-    router.replace("/login");
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2563EB" />
-      </View>
-    );
-  }
+  const { user } = useAuth();
 
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.emoji}>👋</Text>
-        <Text style={styles.title}>Welcome{name ? `, ${name}` : ""}!</Text>
-        <Text style={styles.subtitle}>Welcome to LifeLink AI App</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.topBar}>
+        <View />
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={() => router.push("/profile")}
+          accessibilityLabel="Open profile"
+        >
+          <Ionicons name="person-circle-outline" size={32} color="#111827" />
+        </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Log Out</Text>
-      </TouchableOpacity>
-    </View>
+      <View style={styles.content}>
+        <Text style={styles.emoji}>👋</Text>
+        <Text style={styles.title}>
+          Welcome{user?.name ? `, ${user.name}` : ""}!
+        </Text>
+        <Text style={styles.subtitle}>Welcome to LifeLink AI App</Text>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: "#FFFFFF",
-    justifyContent: "space-between",
-    paddingHorizontal: 24,
-    paddingVertical: 40,
   },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
+  topBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  profileButton: {
+    padding: 4,
   },
   content: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 24,
   },
   emoji: { fontSize: 48, marginBottom: 16 },
   title: {
@@ -104,12 +68,4 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   subtitle: { fontSize: 16, color: "#6B7280", textAlign: "center" },
-  logoutButton: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  logoutText: { color: "#DC2626", fontSize: 16, fontWeight: "600" },
 });

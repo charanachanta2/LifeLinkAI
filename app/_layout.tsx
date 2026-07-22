@@ -26,9 +26,6 @@ function RootNavigator() {
     );
   }
 
-  // Auth-based routing now lives in app/index.tsx and individual screens
-  // (via router.replace), so this layout just declares the stack — it no
-  // longer fires its own competing Redirect on every render.
   return (
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -46,6 +43,10 @@ function RootNavigator() {
         options={{ title: "Dashboard", headerShown: false }}
       />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="profile"
+        options={{ title: "Profile", headerShown: false }}
+      />
       <Stack.Screen
         name="modal"
         options={{ presentation: "modal", title: "Modal" }}

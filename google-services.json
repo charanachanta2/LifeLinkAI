@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "139723049809",
+    "project_id": "lifelinkkai",
+    "storage_bucket": "lifelinkkai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:139723049809:android:f958ba0c45b1e73e7be170",
+        "android_client_info": {
+          "package_name": "com.charanachanta2.LifeLink"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAtGsZMulayEySOHD4-SBWMcKKTIKCq5EA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
