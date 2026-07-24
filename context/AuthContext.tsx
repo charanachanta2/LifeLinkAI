@@ -19,6 +19,9 @@ export type AuthUser = {
   email: string;
   phone?: string;
   isPhoneVerified?: boolean;
+  role?: "civilian" | "police" | "hospital" | "firestation" | "pharmacy" | "admin";
+  roleStatus?: "approved" | "pending" | "rejected";
+  orgName?: string;
 };
 
 type AuthContextType = {

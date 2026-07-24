@@ -26,11 +26,22 @@ type Contact = {
   relation?: string;
 };
 
+const ROLE_LABELS: Record<string, string> = {
+  civilian: "Civilian",
+  police: "Police",
+  hospital: "Hospital",
+  firestation: "Fire Station",
+  pharmacy: "Pharmacy",
+  admin: "Admin",
+};
+
 export default function Profile() {
   const router = useRouter();
 
   const {
     user,
+    token,
+    isLoading: authLoading,
     authHeaders,
     logout,
   } = useAuth();
@@ -82,8 +93,12 @@ export default function Profile() {
   }, [authHeaders]);
 
   useEffect(() => {
+    // Wait for AuthContext to finish reading the token from SecureStore -
+    // otherwise this fires with no token yet and the request fails with
+    // "No token provided".
+    if (authLoading || !token) return;
     loadContacts();
-  }, [loadContacts]);
+  }, [authLoading, token, loadContacts]);
 
   // -------------------------------------------------------
   // Add emergency contact
@@ -292,6 +307,39 @@ export default function Profile() {
                 <Text style={styles.infoValue}>
                   {user?.email || "-"}
                 </Text>
+
+                <Text style={styles.infoLabel}>
+                  Role
+                </Text>
+
+                <View style={styles.verifiedRow}>
+                  <Text style={styles.infoValue}>
+                    {ROLE_LABELS[user?.role || "civilian"]}
+                    {user?.orgName ? ` · ${user.orgName}` : ""}
+                  </Text>
+
+                  {user?.role && user.role !== "civilian" && (
+                    <View
+                      style={[
+                        styles.roleStatusPill,
+                        user.roleStatus === "approved" &&
+                          styles.roleStatusApproved,
+                        user.roleStatus === "pending" &&
+                          styles.roleStatusPending,
+                        user.roleStatus === "rejected" &&
+                          styles.roleStatusRejected,
+                      ]}
+                    >
+                      <Text style={styles.roleStatusText}>
+                        {user.roleStatus === "approved"
+                          ? "Verified"
+                          : user.roleStatus === "pending"
+                          ? "Pending"
+                          : "Rejected"}
+                      </Text>
+                    </View>
+                  )}
+                </View>
 
                 {user?.phone ? (
                   <>
@@ -617,6 +665,30 @@ const styles = StyleSheet.create({
     color: "#16A34A",
     fontWeight: "600",
     fontSize: 13,
+  },
+
+  roleStatusPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+
+  roleStatusApproved: {
+    backgroundColor: "#DCFCE7",
+  },
+
+  roleStatusPending: {
+    backgroundColor: "#FEF3C7",
+  },
+
+  roleStatusRejected: {
+    backgroundColor: "#FEE2E2",
+  },
+
+  roleStatusText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#111827",
   },
 
   description: {
