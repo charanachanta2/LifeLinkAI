@@ -16,6 +16,7 @@ import { BASE_URL, useAuth } from "@/context/AuthContext";
 
 const GEOAPIFY_API_KEY = process.env.EXPO_PUBLIC_GEOAPIFY_API_KEY;
 
+
 type PlaceType = "hospital" | "police" | "fire_station" | "pharmacy";
 
 type Place = {
