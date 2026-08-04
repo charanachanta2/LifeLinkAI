@@ -7,13 +7,14 @@ import { useFocusEffect, useRouter, type Href } from "expo-router";
 import {
   ActivityIndicator,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   useCallback,
@@ -303,6 +304,7 @@ export default function Home() {
   return (
     <SafeAreaView
       style={styles.safeArea}
+      edges={["top", "left", "right"]}
     >
 
       {/* TOP BAR */}
@@ -988,19 +990,24 @@ const styles =
         "space-between",
       alignItems: "center",
 
-      paddingHorizontal: 18,
-      paddingTop: 8,
-      paddingBottom: 8,
+      paddingHorizontal: 20,
+      paddingTop: 10,
+      paddingBottom: 14,
 
-      borderBottomWidth: 1,
-      borderBottomColor:
-        "#F3F4F6",
+      backgroundColor: "#FFFFFF",
+
+      shadowColor: "#000",
+      shadowOpacity: 0.04,
+      shadowOffset: { width: 0, height: 2 },
+      shadowRadius: 6,
+      elevation: 1,
     },
 
 
     brand: {
-      fontSize: 21,
+      fontSize: 22,
       fontWeight: "800",
+      letterSpacing: -0.3,
       color: "#111827",
     },
 
@@ -1011,7 +1018,9 @@ const styles =
 
 
     profileButton: {
-      padding: 4,
+      padding: 5,
+      borderRadius: 20,
+      backgroundColor: "#F9FAFB",
     },
 
 
@@ -1031,27 +1040,33 @@ const styles =
       flexDirection: "row",
       alignItems: "center",
 
-      marginBottom: 32,
+      marginBottom: 28,
+      padding: 18,
+
+      backgroundColor: "#FEF2F2",
+      borderRadius: 22,
     },
 
 
     emoji: {
-      fontSize: 38,
+      fontSize: 34,
       marginRight: 14,
     },
 
 
     title: {
-      fontSize: 25,
+      fontSize: 22,
       fontWeight: "800",
+      letterSpacing: -0.3,
       color: "#111827",
     },
 
 
     subtitle: {
-      fontSize: 14,
-      color: "#6B7280",
+      fontSize: 13,
+      color: "#7F1D1D",
       marginTop: 3,
+      opacity: 0.75,
     },
 
 
@@ -1181,16 +1196,22 @@ const styles =
     reportCard: {
       position: "relative",
 
-      marginBottom: 13,
+      marginBottom: 14,
       padding: 16,
 
       backgroundColor:
         "#FFFFFF",
 
       borderWidth: 1,
-      borderColor: "#E5E7EB",
+      borderColor: "#F1F2F4",
 
-      borderRadius: 17,
+      borderRadius: 20,
+
+      shadowColor: "#000",
+      shadowOpacity: 0.05,
+      shadowOffset: { width: 0, height: 4 },
+      shadowRadius: 12,
+      elevation: 2,
     },
 
 
@@ -1404,12 +1425,18 @@ const styles =
       alignItems: "center",
 
       marginTop: 22,
-      padding: 16,
+      padding: 18,
 
       backgroundColor:
         "#111827",
 
-      borderRadius: 17,
+      borderRadius: 20,
+
+      shadowColor: "#000",
+      shadowOpacity: 0.15,
+      shadowOffset: { width: 0, height: 6 },
+      shadowRadius: 14,
+      elevation: 4,
     },
 
 

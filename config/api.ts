@@ -43,47 +43,57 @@ export const API = {
   // AUTH
   // ==========================================================
 
-  sendOtp:
-    `${API_BASE_URL}/api/auth/send-otp`,
+  sendOtp: `${API_BASE_URL}/api/auth/send-otp`,
 
-  register:
-    `${API_BASE_URL}/api/auth/register`,
+  register: `${API_BASE_URL}/api/auth/register`,
 
-  login:
-    `${API_BASE_URL}/api/auth/login`,
+  login: `${API_BASE_URL}/api/auth/login`,
 
-  googleLogin:
-    `${API_BASE_URL}/api/auth/google-login`,
+  googleLogin: `${API_BASE_URL}/api/auth/google-login`,
 
-  me:
-    `${API_BASE_URL}/api/auth/me`,
+  me: `${API_BASE_URL}/api/auth/me`,
 
   // ==========================================================
   // PHONE
   // ==========================================================
 
-  phone:
-    `${API_BASE_URL}/api/auth/phone`,
+  phone: `${API_BASE_URL}/api/auth/phone`,
 
-  verifyPhone:
-    `${API_BASE_URL}/api/auth/verify-phone`,
+  verifyPhone: `${API_BASE_URL}/api/auth/verify-phone`,
 
   // ==========================================================
   // EMERGENCY
   // ==========================================================
 
-  contacts:
-    `${API_BASE_URL}/api/emergency/contacts`,
+  contacts: `${API_BASE_URL}/api/emergency/contacts`,
+
+  // NEW
+  alert: `${API_BASE_URL}/api/emergency/alert`,
+
+  safe: (incidentId: string) =>
+    `${API_BASE_URL}/api/emergency/${incidentId}/safe`,
+
+  incident: (incidentId: string) =>
+    `${API_BASE_URL}/api/emergency/incidents/${incidentId}`,
+
+  nearby: (
+    lat: number,
+    lng: number,
+    type: string,
+    radius = 5000
+  ) =>
+    `${API_BASE_URL}/api/emergency/nearby?lat=${lat}&lng=${lng}&type=${type}&radius=${radius}`,
+
+  place: (placeId: string) =>
+    `${API_BASE_URL}/api/emergency/place/${placeId}`,
 
   // ==========================================================
   // HEALTH RECORDS
   // ==========================================================
 
-  healthRecords:
-    `${API_BASE_URL}/api/health/records`,
+  healthRecords: `${API_BASE_URL}/api/health/records`,
 
-  healthReport:
-    `${API_BASE_URL}/api/health/report`,
+  healthReport: `${API_BASE_URL}/api/health/report`,
 
   healthRecord: (id: string) =>
     `${API_BASE_URL}/api/health/records/${id}`,

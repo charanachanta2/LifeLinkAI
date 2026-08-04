@@ -11,6 +11,8 @@ import {
   View,
 } from "react-native";
 
+import { SafeAreaView } from "react-native-safe-area-context";
+
 import { API } from "@/config/api";
 import { useAuth } from "@/context/AuthContext";
 
@@ -159,7 +161,7 @@ export default function Analytics() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
+      <SafeAreaView style={styles.centered} edges={["top", "left", "right"]}>
         <ActivityIndicator
           size="large"
           color="#DC2626"
@@ -173,7 +175,7 @@ export default function Analytics() {
           LifeLink AI is preparing your health
           overview.
         </Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -182,8 +184,9 @@ export default function Analytics() {
   // ==========================================================
 
   return (
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
     <ScrollView
-      style={styles.container}
+      style={styles.scroll}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       refreshControl={
@@ -623,6 +626,7 @@ export default function Analytics() {
           </>
         )}
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -748,9 +752,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
 
+  scroll: {
+    flex: 1,
+  },
+
   content: {
     padding: 20,
-    paddingTop: 28,
+    paddingTop: 12,
     paddingBottom: 60,
   },
 
@@ -836,7 +844,12 @@ const styles = StyleSheet.create({
     marginBottom: 28,
     padding: 20,
     backgroundColor: "#111827",
-    borderRadius: 18,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 14,
+    elevation: 4,
   },
 
   overviewTop: {
@@ -898,11 +911,16 @@ const styles = StyleSheet.create({
   measurementCard: {
     width: "48%",
     marginBottom: 12,
-    padding: 15,
+    padding: 16,
     backgroundColor: "#F9FAFB",
     borderWidth: 1,
     borderColor: "#F3F4F6",
-    borderRadius: 16,
+    borderRadius: 18,
+    shadowColor: "#000",
+    shadowOpacity: 0.03,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 1,
   },
 
   measurementIcon: {
@@ -1005,7 +1023,12 @@ const styles = StyleSheet.create({
     marginBottom: 25,
     padding: 18,
     backgroundColor: "#111827",
-    borderRadius: 18,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 14,
+    elevation: 4,
   },
 
   aiHeading: {

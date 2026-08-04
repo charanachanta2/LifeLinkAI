@@ -1382,8 +1382,7 @@ const styles =
 
     safeArea: {
       flex: 1,
-      backgroundColor:
-        "#FFFFFF",
+      backgroundColor: "#F3F4F6",
     },
 
 
@@ -1397,47 +1396,45 @@ const styles =
     // ========================================================
 
     header: {
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      justifyContent:
-        "space-between",
-
-      paddingHorizontal:
-        16,
-
-      paddingVertical:
-        12,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      backgroundColor: "#FFFFFF",
+      borderBottomWidth: 1,
+      borderBottomColor: "#EEF0F3",
     },
 
 
     backButton: {
-      padding: 4,
-      width: 32,
+      padding: 6,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#F3F4F6",
     },
 
 
     headerSpacer: {
-      width: 32,
+      width: 36,
     },
 
 
     headerTitle: {
-      fontSize: 18,
+      fontSize: 17,
       fontWeight: "700",
       color: "#111827",
+      letterSpacing: 0.2,
     },
 
 
     scrollContent: {
-      paddingHorizontal:
-        20,
-
-      paddingBottom:
-        40,
+      paddingHorizontal: 16,
+      paddingTop: 18,
+      paddingBottom: 48,
     },
 
 
@@ -1446,63 +1443,59 @@ const styles =
     // ========================================================
 
     card: {
-      backgroundColor:
-        "#F9FAFB",
-
-      borderRadius:
-        12,
-
-      padding:
-        16,
-
-      marginBottom:
-        16,
+      backgroundColor: "#FFFFFF",
+      borderRadius: 18,
+      padding: 18,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: "#F0F1F3",
+      shadowColor: "#0F172A",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.05,
+      shadowRadius: 10,
+      elevation: 2,
     },
 
 
     cardTitle: {
       fontSize: 16,
       fontWeight: "700",
-      color: "#111827",
-      marginBottom: 10,
+      color: "#0F172A",
+      marginBottom: 12,
+      letterSpacing: 0.1,
     },
 
 
     infoLabel: {
-      fontSize: 12,
-      color: "#6B7280",
-      marginTop: 6,
+      fontSize: 11,
+      color: "#9CA3AF",
+      marginTop: 12,
+      fontWeight: "700",
+      textTransform: "uppercase",
+      letterSpacing: 0.6,
     },
 
 
     infoValue: {
-      fontSize: 15,
+      fontSize: 15.5,
       color: "#111827",
-      fontWeight: "500",
+      fontWeight: "600",
+      marginTop: 3,
     },
 
 
     verifiedRow: {
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      gap:
-        6,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
     },
 
 
     verifiedText: {
-      color:
-        "#16A34A",
-
-      fontWeight:
-        "600",
-
-      fontSize:
-        13,
+      color: "#16A34A",
+      fontWeight: "700",
+      fontSize: 13,
     },
 
 
@@ -1511,59 +1504,44 @@ const styles =
     // ========================================================
 
     roleStatusPill: {
-      paddingHorizontal:
-        8,
-
-      paddingVertical:
-        2,
-
-      borderRadius:
-        999,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 999,
+      borderWidth: 1,
     },
 
 
     roleStatusApproved: {
-      backgroundColor:
-        "#DCFCE7",
+      backgroundColor: "#ECFDF5",
+      borderColor: "#BBF7D0",
     },
 
 
     roleStatusPending: {
-      backgroundColor:
-        "#FEF3C7",
+      backgroundColor: "#FFFBEB",
+      borderColor: "#FDE68A",
     },
 
 
     roleStatusRejected: {
-      backgroundColor:
-        "#FEE2E2",
+      backgroundColor: "#FEF2F2",
+      borderColor: "#FECACA",
     },
 
 
     roleStatusText: {
-      fontSize:
-        11,
-
-      fontWeight:
-        "700",
-
-      color:
-        "#111827",
+      fontSize: 11,
+      fontWeight: "700",
+      color: "#111827",
+      letterSpacing: 0.3,
     },
 
 
     description: {
-      fontSize:
-        14,
-
-      lineHeight:
-        20,
-
-      color:
-        "#6B7280",
-
-      marginBottom:
-        12,
+      fontSize: 13.5,
+      lineHeight: 20,
+      color: "#6B7280",
+      marginBottom: 14,
     },
 
 
@@ -1572,191 +1550,121 @@ const styles =
     // ========================================================
 
     phoneHeader: {
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      justifyContent:
-        "space-between",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
     },
 
 
     phoneTitleContainer: {
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      gap:
-        7,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 9,
     },
 
 
     phoneCardTitle: {
-      marginBottom:
-        0,
+      marginBottom: 0,
     },
 
 
     editText: {
-      color:
-        "#2563EB",
-
-      fontWeight:
-        "700",
-
-      fontSize:
-        14,
+      color: "#2563EB",
+      fontWeight: "700",
+      fontSize: 13.5,
+      backgroundColor: "#EFF6FF",
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+      overflow: "hidden",
     },
 
 
     savedPhoneContainer: {
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      gap:
-        10,
-
-      backgroundColor:
-        "#FFFFFF",
-
-      borderWidth:
-        1,
-
-      borderColor:
-        "#E5E7EB",
-
-      paddingHorizontal:
-        14,
-
-      paddingVertical:
-        13,
-
-      borderRadius:
-        10,
-
-      marginTop:
-        4,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      backgroundColor: "#F8FAFC",
+      borderWidth: 1,
+      borderColor: "#E7EAF0",
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      borderRadius: 14,
+      marginTop: 6,
     },
 
 
     savedPhone: {
-      fontSize:
-        16,
-
-      fontWeight:
-        "700",
-
-      color:
-        "#111827",
-
-      letterSpacing:
-        0.4,
+      fontSize: 16.5,
+      fontWeight: "700",
+      color: "#111827",
+      letterSpacing: 0.5,
     },
 
 
     connectionNotice: {
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      gap:
-        7,
-
-      marginTop:
-        12,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginTop: 14,
+      backgroundColor: "#EFF6FF",
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 10,
     },
 
 
     connectionNoticeText: {
-      color:
-        "#2563EB",
-
-      fontSize:
-        13,
-
-      fontWeight:
-        "600",
+      color: "#2563EB",
+      fontSize: 12.5,
+      fontWeight: "600",
+      flexShrink: 1,
     },
 
 
     verificationNote: {
-      color:
-        "#6B7280",
-
-      fontSize:
-        12,
-
-      marginTop:
-        8,
+      color: "#9CA3AF",
+      fontSize: 12,
+      marginTop: 10,
+      fontStyle: "italic",
     },
 
 
     phoneHint: {
-      fontSize:
-        12,
-
-      color:
-        "#6B7280",
-
-      marginTop:
-        -3,
-
-      marginBottom:
-        12,
+      fontSize: 12,
+      color: "#9CA3AF",
+      marginTop: -4,
+      marginBottom: 14,
     },
 
 
     phoneSaveButton: {
-      backgroundColor:
-        "#2563EB",
-
-      borderRadius:
-        10,
-
-      paddingVertical:
-        13,
-
-      alignItems:
-        "center",
-
-      justifyContent:
-        "center",
-
-      flexDirection:
-        "row",
-
-      gap:
-        7,
+      backgroundColor: "#2563EB",
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "row",
+      gap: 8,
+      shadowColor: "#2563EB",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      elevation: 3,
     },
 
 
     cancelButton: {
-      alignItems:
-        "center",
-
-      paddingVertical:
-        12,
-
-      marginTop:
-        4,
+      alignItems: "center",
+      paddingVertical: 13,
+      marginTop: 2,
     },
 
 
     cancelButtonText: {
-      color:
-        "#6B7280",
-
-      fontWeight:
-        "600",
+      color: "#6B7280",
+      fontWeight: "600",
+      fontSize: 13.5,
     },
 
 
@@ -1765,68 +1673,42 @@ const styles =
     // ========================================================
 
     input: {
-      borderWidth:
-        1,
-
-      borderColor:
-        "#D1D5DB",
-
-      borderRadius:
-        10,
-
-      paddingHorizontal:
-        14,
-
-      paddingVertical:
-        12,
-
-      marginBottom:
-        10,
-
-      fontSize:
-        15,
-
-      color:
-        "#111827",
-
-      backgroundColor:
-        "#FFFFFF",
+      borderWidth: 1.5,
+      borderColor: "#E5E7EB",
+      borderRadius: 12,
+      paddingHorizontal: 15,
+      paddingVertical: 13,
+      marginBottom: 12,
+      fontSize: 15,
+      color: "#111827",
+      backgroundColor: "#F9FAFB",
     },
 
 
     primaryButton: {
-      backgroundColor:
-        "#DC2626",
-
-      borderRadius:
-        10,
-
-      paddingVertical:
-        13,
-
-      alignItems:
-        "center",
-
-      marginBottom:
-        8,
+      backgroundColor: "#DC2626",
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: "center",
+      marginBottom: 8,
+      shadowColor: "#DC2626",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.22,
+      shadowRadius: 8,
+      elevation: 3,
     },
 
 
     disabledButton: {
-      opacity:
-        0.6,
+      opacity: 0.6,
     },
 
 
     primaryButtonText: {
-      color:
-        "#FFFFFF",
-
-      fontWeight:
-        "700",
-
-      fontSize:
-        15,
+      color: "#FFFFFF",
+      fontWeight: "700",
+      fontSize: 15,
+      letterSpacing: 0.2,
     },
 
 
@@ -1835,59 +1717,44 @@ const styles =
     // ========================================================
 
     contactsHeaderRow: {
-      flexDirection:
-        "row",
-
-      justifyContent:
-        "space-between",
-
-      alignItems:
-        "center",
-
-      marginBottom:
-        12,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 14,
+      paddingHorizontal: 2,
     },
 
 
     loader: {
-      marginTop:
-        12,
+      marginTop: 16,
     },
 
 
     emptyText: {
-      color:
-        "#6B7280",
-
-      textAlign:
-        "center",
-
-      marginTop:
-        8,
-
-      marginBottom:
-        12,
+      color: "#9CA3AF",
+      textAlign: "center",
+      marginTop: 12,
+      marginBottom: 16,
+      fontSize: 13.5,
     },
 
 
     contactRow: {
-      flexDirection:
-        "row",
-
-      alignItems:
-        "center",
-
-      justifyContent:
-        "space-between",
-
-      paddingVertical:
-        12,
-
-      borderBottomWidth:
-        1,
-
-      borderBottomColor:
-        "#F3F4F6",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      backgroundColor: "#FFFFFF",
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: "#F0F1F3",
+      marginBottom: 10,
+      shadowColor: "#0F172A",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 6,
+      elevation: 1,
     },
 
 
@@ -1897,32 +1764,24 @@ const styles =
 
 
     contactName: {
-      fontSize:
-        15,
-
-      fontWeight:
-        "600",
-
-      color:
-        "#111827",
+      fontSize: 15,
+      fontWeight: "700",
+      color: "#111827",
     },
 
 
     contactSub: {
-      fontSize:
-        13,
-
-      color:
-        "#6B7280",
-
-      marginTop:
-        2,
+      fontSize: 12.5,
+      color: "#6B7280",
+      marginTop: 3,
     },
 
 
     deleteButton: {
-      padding:
-        8,
+      padding: 9,
+      borderRadius: 10,
+      backgroundColor: "#FEF2F2",
+      marginLeft: 8,
     },
 
 
@@ -1931,43 +1790,22 @@ const styles =
     // ========================================================
 
     logoutButton: {
-      borderWidth:
-        1,
-
-      borderColor:
-        "#D1D5DB",
-
-      borderRadius:
-        10,
-
-      paddingVertical:
-        14,
-
-      alignItems:
-        "center",
-
-      justifyContent:
-        "center",
-
-      flexDirection:
-        "row",
-
-      gap:
-        8,
-
-      marginTop:
-        24,
+      borderWidth: 1.5,
+      borderColor: "#FEE2E2",
+      backgroundColor: "#FFFFFF",
+      borderRadius: 14,
+      paddingVertical: 15,
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "row",
+      gap: 9,
+      marginTop: 26,
     },
 
 
     logoutText: {
-      color:
-        "#DC2626",
-
-      fontSize:
-        16,
-
-      fontWeight:
-        "600",
+      color: "#DC2626",
+      fontSize: 15.5,
+      fontWeight: "700",
     },
   });
