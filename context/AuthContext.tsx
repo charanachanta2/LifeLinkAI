@@ -6,6 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import * as SecureStore from "expo-secure-store";
+import { registerForPushNotificationsAsync } from "@/utils/pushNotifications";
 
 // ---- Config ----
 const BASE_URL = "https://lifelink-backend-neon.vercel.app";
@@ -22,6 +23,8 @@ export type AuthUser = {
   role?: "civilian" | "police" | "hospital" | "firestation" | "pharmacy" | "admin";
   roleStatus?: "approved" | "pending" | "rejected";
   orgName?: string;
+  location?: { lat: number; lng: number } | null;
+  hasPushToken?: boolean;
 };
 
 type AuthContextType = {
@@ -29,7 +32,7 @@ type AuthContextType = {
   user: AuthUser | null;
   isLoggedIn: boolean;
   isLoading: boolean; // true while checking SecureStore on app boot
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthUser>;
   register: (
     name: string,
     email: string,
@@ -42,9 +45,30 @@ type AuthContextType = {
   logout: () => Promise<void>;
   authHeaders: () => Record<string, string>;
   refreshUser: () => Promise<void>;
+  updateAgencyLocation: (lat: number, lng: number) => Promise<void>;
+  /** Route for the (tabs)-style group this user's role belongs in. */
+  homeRoute: () => string;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Maps a user's role to the tab group they should land on after login.
+function roleHomeRoute(role?: AuthUser["role"]): string {
+  switch (role) {
+    case "police":
+      return "/(police)";
+    case "hospital":
+      return "/(hospital)";
+    case "firestation":
+      return "/(firestation)";
+    case "pharmacy":
+      return "/(pharmacy)";
+    case "civilian":
+    case "admin":
+    default:
+      return "/(tabs)";
+  }
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
@@ -80,6 +104,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  // Registers this device for push notifications and sends the
+  // Expo push token to the backend. Fire-and-forget: never blocks
+  // login, and failures (e.g. simulator, permission denied) are
+  // silently ignored since push is a "nice to have", not required
+  // to use the app.
+  const syncPushToken = useCallback(async (authToken: string) => {
+    try {
+      const pushToken = await registerForPushNotificationsAsync();
+      if (!pushToken) return;
+
+      await fetch(`${BASE_URL}/api/auth/push-token`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ pushToken }),
+      });
+    } catch (err) {
+      console.warn("Push token sync failed (non-fatal):", err);
+    }
+  }, []);
+
   const login = useCallback(
     async (email: string, password: string) => {
       const res = await fetch(`${BASE_URL}/api/auth/login`, {
@@ -90,8 +137,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.message || "Login failed");
       await persistSession(body.token, body.user);
+      syncPushToken(body.token);
+      return body.user as AuthUser;
     },
-    [persistSession]
+    [persistSession, syncPushToken]
   );
 
   const sendOtp = useCallback(async (email: string) => {
@@ -120,8 +169,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.message || "Registration failed");
       await persistSession(body.token, body.user);
+      syncPushToken(body.token);
     },
-    [persistSession]
+    [persistSession, syncPushToken]
   );
 
   const googleLogin = useCallback(
@@ -134,8 +184,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.message || "Google login failed");
       await persistSession(body.token, body.user);
+      syncPushToken(body.token);
     },
-    [persistSession]
+    [persistSession, syncPushToken]
   );
 
   const logout = useCallback(async () => {
@@ -168,6 +219,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(body.user);
   }, [token]);
 
+  // Saves this agency account's station GPS coordinates on the
+  // backend, so "nearby police" (and future nearby-hospital/fire)
+  // matching can find it when a civilian sends an SOS.
+  const updateAgencyLocation = useCallback(
+    async (lat: number, lng: number) => {
+      if (!token) return;
+      const res = await fetch(`${BASE_URL}/api/auth/location`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ lat, lng }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.message || "Failed to update location");
+
+      await SecureStore.setItemAsync(USER_KEY, JSON.stringify(body.user));
+      setUser(body.user);
+    },
+    [token]
+  );
+
+  const homeRoute = useCallback(() => roleHomeRoute(user?.role), [user]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -182,6 +258,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         authHeaders,
         refreshUser,
+        updateAgencyLocation,
+        homeRoute,
       }}
     >
       {children}

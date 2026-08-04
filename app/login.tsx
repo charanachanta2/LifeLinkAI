@@ -35,10 +35,26 @@ export default function Login() {
     setLoading(true);
     try {
       // login() lives in AuthContext — it handles the request, saves the
-      // session (SecureStore), and flips isLoggedIn to true. The root
-      // layout is watching that state and will move off /login on its own.
-      await login(email.trim(), password);
-      router.replace("/(tabs)");
+      // session (SecureStore), and flips isLoggedIn to true. It also
+      // returns the logged-in user object so we can route by role below.
+      const loggedInUser = await login(email.trim(), password);
+
+      switch (loggedInUser?.role) {
+        case "police":
+          router.replace("/(police)");
+          break;
+        case "hospital":
+          router.replace("/(hospital)");
+          break;
+        case "firestation":
+          router.replace("/(firestation)");
+          break;
+        case "pharmacy":
+          router.replace("/(pharmacy)");
+          break;
+        default:
+          router.replace("/(tabs)");
+      }
     } catch (err: any) {
       setError(err.message || "Invalid email or password");
     } finally {

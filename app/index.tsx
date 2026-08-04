@@ -4,7 +4,7 @@ import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Index() {
-  const { isLoggedIn, isLoading } = useAuth();
+  const { isLoggedIn, isLoading, homeRoute } = useAuth();
 
   if (isLoading) {
     return (
@@ -14,7 +14,7 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={isLoggedIn ? "/(tabs)" : "/login"} />;
+  return <Redirect href={isLoggedIn ? (homeRoute() as any) : "/login"} />;
 }
 
 const styles = StyleSheet.create({
