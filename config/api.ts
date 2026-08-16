@@ -87,6 +87,56 @@ export const API = {
   place: (placeId: string) =>
     `${API_BASE_URL}/api/emergency/place/${placeId}`,
 
+  // Nearby registered public-service accounts (police/hospital/
+  // firestation/pharmacy) — LifeLink's own accounts, not Google Places.
+  agenciesNearby: (
+    lat: number,
+    lng: number,
+    role?: string,
+    radius = 15
+  ) =>
+    `${API_BASE_URL}/api/emergency/agencies/nearby?lat=${lat}&lng=${lng}${
+      role ? `&role=${role}` : ""
+    }&radius=${radius}`,
+
+  // ==========================================================
+  // BLOOD BANK
+  // ==========================================================
+
+  bloodDonorRegister: `${API_BASE_URL}/api/bloodbank/donor`,
+
+  bloodDonorAvailability: `${API_BASE_URL}/api/bloodbank/donor/availability`,
+
+  bloodDonorsNearby: (
+    lat: number,
+    lng: number,
+    bloodGroup?: string,
+    radius = 15
+  ) =>
+    `${API_BASE_URL}/api/bloodbank/donors/nearby?lat=${lat}&lng=${lng}${
+      bloodGroup ? `&bloodGroup=${bloodGroup}` : ""
+    }&radius=${radius}`,
+
+  bloodRequests: `${API_BASE_URL}/api/bloodbank/requests`,
+
+  bloodRequestsNearby: (
+    lat: number,
+    lng: number,
+    bloodGroup?: string,
+    radius = 15
+  ) =>
+    `${API_BASE_URL}/api/bloodbank/requests/nearby?lat=${lat}&lng=${lng}${
+      bloodGroup ? `&bloodGroup=${bloodGroup}` : ""
+    }&radius=${radius}`,
+
+  bloodRequestsMine: `${API_BASE_URL}/api/bloodbank/requests/mine`,
+
+  bloodRequestFulfill: (id: string) =>
+    `${API_BASE_URL}/api/bloodbank/requests/${id}/fulfill`,
+
+  bloodRequestCancel: (id: string) =>
+    `${API_BASE_URL}/api/bloodbank/requests/${id}/cancel`,
+
   // ==========================================================
   // HEALTH RECORDS
   // ==========================================================
