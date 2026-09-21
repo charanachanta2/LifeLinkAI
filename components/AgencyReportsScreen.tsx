@@ -23,6 +23,7 @@ type Incident = {
   user?: { name?: string; phone?: string; email?: string };
   respondingOfficer?: { name?: string; orgName?: string };
   notifiedPolice?: { officer: string; distanceKm: number }[];
+  notifiedAgencies?: { agency: string; role: string; distanceKm: number }[];
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -87,9 +88,19 @@ export default function AgencyReportsScreen({ role }: { role: string }) {
   };
 
   const distanceFor = (incident: Incident): number | null => {
-    if (role !== "police" || !incident.notifiedPolice || !user) return null;
-    const mine = incident.notifiedPolice.find((n) => String(n.officer) === user.id);
-    return mine ? mine.distanceKm : null;
+    if (!user) return null;
+
+    // Every role (police, hospital, fire station) is listed here.
+    const mine = incident.notifiedAgencies?.find(
+      (n) => String(n.agency) === user.id
+    );
+    if (mine) return mine.distanceKm;
+
+    // Incidents created before notifiedAgencies existed.
+    const legacy = incident.notifiedPolice?.find(
+      (n) => String(n.officer) === user.id
+    );
+    return legacy ? legacy.distanceKm : null;
   };
 
   const renderItem = ({ item }: { item: Incident }) => {

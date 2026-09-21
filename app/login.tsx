@@ -120,6 +120,18 @@ export default function Login() {
               </Text>
             </TouchableOpacity>
 
+            <Text style={styles.legalNote}>
+              By logging in you agree to our{" "}
+              <Link href="/terms" style={styles.legalLink}>
+                Terms & Conditions
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy-policy" style={styles.legalLink}>
+                Privacy Policy
+              </Link>
+              .
+            </Text>
+
             <Link href="/register" asChild>
               <TouchableOpacity style={styles.linkWrap}>
                 <Text style={styles.linkText}>
@@ -199,4 +211,12 @@ const styles = StyleSheet.create({
   linkWrap: { marginTop: 22, alignItems: "center" },
   linkText: { color: "#6B7280", fontSize: 14 },
   linkBold: { color: "#2563EB", fontWeight: "700" },
+  legalNote: {
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: "#6B7280",
+    textAlign: "center",
+    marginTop: 16,
+  },
+  legalLink: { color: "#DC2626", fontWeight: "700" },
 });

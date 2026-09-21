@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   Linking,
   Platform,
@@ -70,12 +71,62 @@ const FILTERS: { type: AgencyRole; label: string; emoji: string; color: string; 
   { type: "pharmacy", label: "Pharmacy", emoji: "💊", color: "#1A9D6D", soft: "#E5F7EF" },
 ];
 
+// ------------------------------------------------------------
+// Staggered fade + rise entrance for each responder card.
+// ------------------------------------------------------------
+function AnimatedCard({
+  index,
+  children,
+}: {
+  index: number;
+  children: ReactNode;
+}) {
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: 380,
+      delay: Math.min(index, 8) * 55,
+      useNativeDriver: true,
+    }).start();
+  }, [progress, index]);
+
+  return (
+    <Animated.View
+      style={{
+        opacity: progress,
+        transform: [
+          {
+            translateY: progress.interpolate({
+              inputRange: [0, 1],
+              outputRange: [18, 0],
+            }),
+          },
+        ],
+      }}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
 // ============================================================
 // COMPONENT
 // ============================================================
 
 export default function FindEmergency() {
   const { authHeaders } = useAuth();
+
+  // Header entrance
+  const headerAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(headerAnim, {
+      toValue: 1,
+      duration: 420,
+      useNativeDriver: true,
+    }).start();
+  }, [headerAnim]);
 
   const [region, setRegion] = useState<SimpleRegion | null>(null);
   const [locError, setLocError] = useState<string | null>(null);
@@ -168,7 +219,22 @@ export default function FindEmergency() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
-      <View style={styles.header}>
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            opacity: headerAnim,
+            transform: [
+              {
+                translateY: headerAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-10, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
         <View style={styles.headerIconWrap}>
           <Text style={styles.emoji}>🚨</Text>
         </View>
@@ -178,7 +244,7 @@ export default function FindEmergency() {
             Registered police, hospital, fire and pharmacy responders near you
           </Text>
         </View>
-      </View>
+      </Animated.View>
 
       {/* Filter chips */}
       <ScrollView
@@ -238,11 +304,22 @@ export default function FindEmergency() {
               <Text style={styles.emptyText}>
                 {errorMsg || "No registered responders found nearby yet."}
               </Text>
+              {errorMsg ? (
+                <TouchableOpacity
+                  style={styles.retryBtn}
+                  onPress={onRefresh}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                  <Text style={styles.retryBtnText}>Try again</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           }
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const filter = filterFor(item.role);
             return (
+              <AnimatedCard index={index}>
               <View style={styles.card}>
                 <View style={styles.cardTopRow}>
                   <View style={[styles.iconBadge, { backgroundColor: filter.soft }]}>
@@ -267,18 +344,29 @@ export default function FindEmergency() {
                     <Ionicons name="location-outline" size={14} color={COLORS.textMuted} />
                     <Text style={styles.distanceText}>{item.distanceKm} km away</Text>
                   </View>
+                  {!item.phone && !!item.email && (
+                    <TouchableOpacity
+                      style={[styles.callBtn, { backgroundColor: filter.color }]}
+                      onPress={() => Linking.openURL(`mailto:${item.email}`)}
+                      activeOpacity={0.85}
+                    >
+                      <Ionicons name="mail" size={16} color="#FFFFFF" />
+                      <Text style={styles.callBtnText}>Email</Text>
+                    </TouchableOpacity>
+                  )}
                   {!!item.phone && (
                     <TouchableOpacity
                       style={[styles.callBtn, { backgroundColor: filter.color }]}
                       onPress={() => handleCall(item.phone)}
                       activeOpacity={0.85}
                     >
-                      <Ionicons name="call" size={14} color="#FFFFFF" />
+                      <Ionicons name="call" size={16} color="#FFFFFF" />
                       <Text style={styles.callBtnText}>Call</Text>
                     </TouchableOpacity>
                   )}
                 </View>
               </View>
+              </AnimatedCard>
             );
           }}
         />
@@ -352,7 +440,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   chipActiveNeutral: { backgroundColor: COLORS.ink, borderColor: COLORS.ink },
-  chipEmoji: { fontSize: 13 },
+  chipEmoji: { fontSize: 19 },
   chipText: { fontSize: 13, fontWeight: "600", color: COLORS.textMuted },
   chipTextActive: { color: "#FFFFFF" },
 
@@ -383,13 +471,13 @@ const styles = StyleSheet.create({
   cardTopRow: { flexDirection: "row", alignItems: "center" },
   cardHeaderText: { flex: 1, marginLeft: 12 },
   iconBadge: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: 56,
+    height: 56,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
-  iconBadgeEmoji: { fontSize: 20 },
+  iconBadgeEmoji: { fontSize: 30 },
   cardTitle: { fontSize: 15, fontWeight: "700", color: COLORS.text },
 
   rolePill: {
@@ -413,10 +501,21 @@ const styles = StyleSheet.create({
   callBtn: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
     borderRadius: 999,
     gap: 6,
   },
-  callBtnText: { color: "#FFFFFF", fontSize: 12.5, fontWeight: "700" },
+  callBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
+  retryBtn: {
+    marginTop: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: COLORS.emergency,
+    paddingVertical: 11,
+    paddingHorizontal: 22,
+    borderRadius: 999,
+  },
+  retryBtnText: { color: "#FFFFFF", fontSize: 14.5, fontWeight: "800" },
 });

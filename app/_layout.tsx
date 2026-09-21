@@ -27,12 +27,10 @@ function RootNavigator() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ headerShown: false, animation: "slide_from_right" }}>
       <Stack.Screen name="index" />
 
       <Stack.Screen name="register" />
-
-      <Stack.Screen name="spinner" />
 
       <Stack.Screen name="login" />
 
@@ -41,6 +39,10 @@ function RootNavigator() {
       <Stack.Screen name="(tabs)" />
 
       <Stack.Screen name="profile" />
+
+      <Stack.Screen name="privacy-policy" />
+
+      <Stack.Screen name="terms" />
 
       {/* Emergency Screen */}
       <Stack.Screen

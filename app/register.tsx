@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -23,6 +24,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [otp, setOtp] = useState("");
+  const [agreed, setAgreed] = useState(false);
 
   const [otpSent, setOtpSent] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -70,6 +72,10 @@ export default function Register() {
 
     if (!name || !password || !confirmPassword) {
       setError("Please fill in all required fields");
+      return;
+    }
+    if (!agreed) {
+      setError("Please accept the Terms & Conditions and Privacy Policy to continue");
       return;
     }
     if (!otpSent) {
@@ -230,6 +236,39 @@ export default function Register() {
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
             {message ? <Text style={styles.successText}>{message}</Text> : null}
 
+            <View style={styles.consentRow}>
+              <TouchableOpacity
+                onPress={() => setAgreed((v) => !v)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: agreed }}
+              >
+                <Ionicons
+                  name={agreed ? "checkbox" : "square-outline"}
+                  size={26}
+                  color={agreed ? "#DC2626" : "#9CA3AF"}
+                />
+              </TouchableOpacity>
+
+              <Text style={styles.consentText}>
+                I agree to the{" "}
+                <Text
+                  style={styles.consentLink}
+                  onPress={() => router.push("/terms" as any)}
+                >
+                  Terms & Conditions
+                </Text>{" "}
+                and{" "}
+                <Text
+                  style={styles.consentLink}
+                  onPress={() => router.push("/privacy-policy" as any)}
+                >
+                  Privacy Policy
+                </Text>
+                .
+              </Text>
+            </View>
+
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
               onPress={handleRegister}
@@ -321,4 +360,12 @@ const styles = StyleSheet.create({
   linkWrap: { marginTop: 22, alignItems: "center" },
   linkText: { color: "#6B7280", fontSize: 14 },
   linkBold: { color: "#2563EB", fontWeight: "700" },
+  consentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginBottom: 16,
+  },
+  consentText: { flex: 1, fontSize: 13.5, lineHeight: 20, color: "#4B5563" },
+  consentLink: { color: "#DC2626", fontWeight: "700" },
 });

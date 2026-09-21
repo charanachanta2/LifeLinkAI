@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import {
   useCallback,
   useEffect,
@@ -66,7 +66,7 @@ const ROLE_LABELS: Record<
 // PROFILE
 // ============================================================
 
-export default function Profile() {
+function CivilianProfile() {
   const router =
     useRouter();
 
@@ -1343,6 +1343,28 @@ export default function Profile() {
           // ==================================================
 
           ListFooterComponent={
+            <View>
+            <View style={styles.legalCard}>
+              <TouchableOpacity
+                style={styles.legalRow}
+                onPress={() => router.push("/privacy-policy" as any)}
+              >
+                <Ionicons name="shield-checkmark-outline" size={22} color="#374151" />
+                <Text style={styles.legalText}>Privacy Policy</Text>
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+
+              <View style={styles.legalDivider} />
+
+              <TouchableOpacity
+                style={styles.legalRow}
+                onPress={() => router.push("/terms" as any)}
+              >
+                <Ionicons name="document-text-outline" size={22} color="#374151" />
+                <Text style={styles.legalText}>Terms & Conditions</Text>
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity
               style={
                 styles.logoutButton
@@ -1365,6 +1387,7 @@ export default function Profile() {
                 Log Out
               </Text>
             </TouchableOpacity>
+            </View>
           }
         />
       </KeyboardAvoidingView>
@@ -1808,4 +1831,40 @@ const styles =
       fontSize: 15.5,
       fontWeight: "700",
     },
-  });
+  
+  legalCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  legalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+  },
+  legalText: { flex: 1, fontSize: 15, fontWeight: "600", color: "#111827" },
+  legalDivider: { height: 1, backgroundColor: "#F1F2F4" },
+});
+
+// Public-service accounts must never land on the civilian profile
+// (emergency contacts, medical records...). Send them to their own
+// Profile tab instead.
+export default function Profile() {
+  const { user, isLoading, homeRoute } = useAuth();
+
+  if (
+    !isLoading &&
+    user?.role &&
+    user.role !== "civilian" &&
+    user.role !== "admin"
+  ) {
+    return <Redirect href={homeRoute() as any} />;
+  }
+
+  return <CivilianProfile />;
+}

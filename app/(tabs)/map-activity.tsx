@@ -1,15 +1,20 @@
+import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   Linking,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 
 import { BASE_URL, useAuth } from "@/context/AuthContext";
@@ -26,7 +31,26 @@ type Place = {
   location: { lat: number; lng: number };
   rating?: number;
   openNow?: boolean;
+  // Set for accounts registered on LifeLink (verified responders).
+  registered?: boolean;
+  phone?: string;
+  email?: string;
+  distanceKm?: number;
 };
+
+type SosService = "police" | "hospital" | "firestation";
+
+const SOS_SERVICES: {
+  key: SosService;
+  label: string;
+  hint: string;
+  emoji: string;
+  color: string;
+}[] = [
+  { key: "police", label: "Police", hint: "Crime, accident, threat", emoji: "🚓", color: "#2563EB" },
+  { key: "hospital", label: "Ambulance / Hospital", hint: "Injury, medical emergency", emoji: "🏥", color: "#DC2626" },
+  { key: "firestation", label: "Fire Brigade", hint: "Fire, rescue, gas leak", emoji: "🚒", color: "#EA580C" },
+];
 
 type SimpleRegion = { latitude: number; longitude: number };
 
@@ -54,6 +78,28 @@ function buildMapHtml(lat: number, lng: number) {
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     html, body, #map { height: 100%; margin: 0; padding: 0; }
+    .pin {
+      width: 44px; height: 44px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      border: 3px solid #fff; box-shadow: 0 3px 8px rgba(0,0,0,0.45);
+      font-size: 23px; line-height: 1; position: relative;
+    }
+    .pin.registered { border-color: #FACC15; width: 50px; height: 50px; font-size: 26px; }
+    .badge {
+      position: absolute; right: -6px; top: -6px; width: 20px; height: 20px;
+      border-radius: 50%; background: #16A34A; color: #fff; border: 2px solid #fff;
+      font: 800 12px/16px sans-serif; text-align: center;
+    }
+    .pin-tag {
+      position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+      margin-top: 4px; background: #111827; color: #fff; font: 700 10px sans-serif;
+      padding: 2px 6px; border-radius: 7px; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+    .me { width: 44px; height: 44px; border-radius: 50%; background: rgba(37,99,235,0.18);
+      display: flex; align-items: center; justify-content: center; animation: meP 2s ease-out infinite; }
+    .me-dot { width: 20px; height: 20px; border-radius: 50%; background: #2563EB;
+      border: 3px solid #fff; box-shadow: 0 1px 5px rgba(0,0,0,0.5); }
+    @keyframes meP { 0% { transform: scale(.8); } 70% { transform: scale(1.15); } 100% { transform: scale(.8); } }
   </style>
 </head>
 <body>
@@ -69,9 +115,9 @@ function buildMapHtml(lat: number, lng: number) {
 
     const userIcon = L.divIcon({
       className: '',
-      html: '<div style="width:16px;height:16px;border-radius:50%;background:#2563EB;border:3px solid white;box-shadow:0 0 4px rgba(0,0,0,0.4);"></div>',
-      iconSize: [16, 16],
-      iconAnchor: [8, 8],
+      html: '<div class="me"><div class="me-dot"></div></div>',
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
     });
     L.marker([${lat}, ${lng}], { icon: userIcon }).addTo(map);
 
@@ -82,19 +128,28 @@ function buildMapHtml(lat: number, lng: number) {
       placeMarkers = [];
     }
 
-    // Called from React Native via injectJavaScript
-    window.updateMarkers = function (placesJson, color) {
+    // Called from React Native via injectJavaScript.
+    // The single nearest place (list is distance-sorted by the backend)
+    // gets a "<Label> near you" tag so it's obvious at a glance, e.g.
+    // "Police near you" instead of a generic, misleading label.
+    window.updateMarkers = function (placesJson, color, emoji, nearLabel) {
       clearPlaceMarkers();
       const places = JSON.parse(placesJson);
-      const icon = L.divIcon({
-        className: '',
-        html: '<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;background:' + color + ';transform:rotate(-45deg);border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,0.4);"></div>',
-        iconSize: [28, 28],
-        iconAnchor: [14, 28],
-      });
 
-      places.forEach((place) => {
-        const marker = L.marker([place.location.lat, place.location.lng], { icon }).addTo(map);
+      places.forEach((place, idx) => {
+        const reg = !!place.registered;
+        const size = reg ? 50 : 44;
+        const showTag = idx === 0;
+        const tagHtml = showTag
+          ? '<div class="pin-tag">' + nearLabel + ' near you</div>'
+          : '';
+        const icon = L.divIcon({
+          className: '',
+          html: '<div style="position:relative"><div class="pin' + (reg ? ' registered' : '') + '" style="background:' + color + '"><span>' + emoji + '</span>' + (reg ? '<div class="badge">✓</div>' : '') + '</div>' + tagHtml + '</div>',
+          iconSize: [size, size],
+          iconAnchor: [size / 2, size / 2],
+        });
+        const marker = L.marker([place.location.lat, place.location.lng], { icon, zIndexOffset: reg ? 400 : (showTag ? 300 : 0) }).addTo(map);
         marker.on('click', function () {
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'markerPress', place }));
         });
@@ -122,7 +177,44 @@ export default function MapActivity() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
   const [sosLoading, setSosLoading] = useState(false);
+  const [sosOpen, setSosOpen] = useState(false);
+  const [sosServices, setSosServices] = useState<SosService[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Entrance animation for the map, and a gentle continuous pulse on the
+  // SOS button so it reads as "always live".
+  const mapBoxAnim = useRef(new Animated.Value(0)).current;
+  const sosPulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.timing(mapBoxAnim, {
+      toValue: 1,
+      duration: 420,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [mapBoxAnim]);
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(sosPulse, {
+          toValue: 1.08,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(sosPulse, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [sosPulse]);
 
   // Get current location once on mount
   useEffect(() => {
@@ -189,11 +281,32 @@ export default function MapActivity() {
       .replace(/\\/g, "\\\\")
       .replace(/'/g, "\\'");
     webviewRef.current.injectJavaScript(
-      `window.updateMarkers('${json}', '${activeFilter.color}'); true;`,
+      `window.updateMarkers('${json}', '${activeFilter.color}', '${activeFilter.emoji}', '${activeFilter.label}'); true;`,
     );
-  }, [places, activeFilter.color, mapReady]);
+  }, [places, activeFilter.color, activeFilter.emoji, mapReady]);
 
   const handleMarkerPress = async (place: Place) => {
+    // Registered LifeLink responders already carry their contact details.
+    if (place.registered) {
+      const buttons: any[] = [];
+      if (place.phone) {
+        buttons.push({ text: "Call", onPress: () => Linking.openURL(`tel:${place.phone}`) });
+      }
+      if (place.email) {
+        buttons.push({ text: "Email", onPress: () => Linking.openURL(`mailto:${place.email}`) });
+      }
+      buttons.push({ text: "Close", style: "cancel" });
+
+      Alert.alert(
+        `✅ ${place.name}`,
+        `Registered on LifeLink${
+          place.distanceKm != null ? ` · ${place.distanceKm} km away` : ""
+        }${place.phone ? `\n${place.phone}` : ""}`,
+        buttons,
+      );
+      return;
+    }
+
     try {
       const res = await fetch(
         `${BASE_URL}/api/emergency/place/${place.placeId}`,
@@ -232,49 +345,62 @@ export default function MapActivity() {
     }
   };
 
-  const handleSOS = () => {
+  const openSosPicker = () => {
     if (!region) return;
+    setSosServices([]);
+    setSosOpen(true);
+  };
 
-    Alert.alert(
-      "Send SOS Alert?",
-      "This will notify your emergency contacts with your current location.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Send Alert",
-          style: "destructive",
-          onPress: async () => {
-            setSosLoading(true);
-            try {
-              const res = await fetch(`${BASE_URL}/api/emergency/alert`, {
-                method: "POST",
-                headers: authHeaders(),
-                body: JSON.stringify({
-                  lat: region.latitude,
-                  lng: region.longitude,
-                }),
-              });
-
-              const body = await res.json().catch(() => ({}));
-              if (!res.ok)
-                throw new Error(body.message || "Failed to send alert");
-
-              Alert.alert(
-                "Alert sent",
-                "Your emergency contacts have been notified.",
-              );
-            } catch (err: any) {
-              Alert.alert(
-                "Couldn't send alert",
-                err.message || "Please try again.",
-              );
-            } finally {
-              setSosLoading(false);
-            }
-          },
-        },
-      ],
+  const toggleService = (key: SosService) =>
+    setSosServices((current) =>
+      current.includes(key) ? current.filter((k) => k !== key) : [...current, key],
     );
+
+  const allSelected = sosServices.length === SOS_SERVICES.length;
+
+  const sendSOS = async () => {
+    if (!region || !sosServices.length) return;
+
+    setSosLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/emergency/alert`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          lat: region.latitude,
+          lng: region.longitude,
+          services: sosServices,
+        }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.message || "Failed to send alert");
+
+      setSosOpen(false);
+
+      // Tell the person exactly who was reached, and who could not be.
+      const counts = body.agenciesNotified || {};
+      const reached: string[] = [];
+      const missing: string[] = [];
+
+      SOS_SERVICES.filter((svc) => sosServices.includes(svc.key)).forEach((svc) => {
+        const n = counts[svc.key] || 0;
+        if (n > 0) reached.push(`${svc.label} (${n} nearby)`);
+        else missing.push(svc.label);
+      });
+
+      let text = "Your emergency contacts have been notified.";
+      if (reached.length) text += `\n\nAlerted: ${reached.join(", ")}.`;
+      if (missing.length) {
+        text += `\n\nNo registered ${missing.join(", ")} nearby yet — please also call 112.`;
+      }
+
+      Alert.alert("Alert sent", text);
+    } catch (err: any) {
+      Alert.alert("Couldn't send alert", err.message || "Please try again.");
+    } finally {
+      setSosLoading(false);
+    }
   };
 
   const mapHtml = useMemo(() => {
@@ -317,49 +443,66 @@ export default function MapActivity() {
   }
 
   return (
-    <View style={styles.container}>
-      <WebView
-        ref={webviewRef}
-        originWhitelist={["*"]}
-        source={{ html: mapHtml }}
-        style={StyleSheet.absoluteFillObject}
-        onMessage={handleWebViewMessage}
-        javaScriptEnabled
-        domStorageEnabled
-      />
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* Plain full-screen map for civilian accounts — no box card, no
+          list panel. Filter chips float on top; tap a marker for details. */}
+      <Animated.View
+        style={[
+          styles.mapBox,
+          {
+            opacity: mapBoxAnim,
+            transform: [
+              {
+                scale: mapBoxAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.97, 1],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <WebView
+          ref={webviewRef}
+          originWhitelist={["*"]}
+          source={{ html: mapHtml }}
+          style={styles.map}
+          onMessage={handleWebViewMessage}
+          javaScriptEnabled
+          domStorageEnabled
+        />
 
-      {/* Loading / error feedback sits just above the filter dock so it
-          never collides with it */}
-      {loading && (
-        <View style={styles.loadingPill}>
-          <ActivityIndicator size="small" color="#111827" />
-          <Text style={styles.loadingText}>
-            Finding {activeFilter.label.toLowerCase()}…
-          </Text>
-        </View>
-      )}
+        {/* Loading / error feedback, top of the map box */}
+        {loading && (
+          <View style={styles.loadingPill}>
+            <ActivityIndicator size="small" color="#111827" />
+            <Text style={styles.loadingText}>
+              Finding {activeFilter.label.toLowerCase()}…
+            </Text>
+          </View>
+        )}
 
-      {errorMsg && !loading && (
-        <View style={styles.errorPill}>
-          <Text style={styles.errorText}>{errorMsg}</Text>
-        </View>
-      )}
+        {errorMsg && !loading && (
+          <View style={styles.errorPill}>
+            <Text style={styles.errorText}>{errorMsg}</Text>
+          </View>
+        )}
 
-      {/* Filter dock: sits above the SOS button, just above the tab bar */}
-      <View style={styles.filterDock}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
-        >
-          {FILTERS.map((filter) => {
-            const active = filter.type === activeType;
-            return (
-              <TouchableOpacity
-                key={filter.type}
-                onPress={() => setActiveType(filter.type)}
-                activeOpacity={0.85}
-                style={[
+        {/* Recenter-ish filter dock, docked to the bottom edge of the map box */}
+        <View style={styles.filterDock}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
+            {FILTERS.map((filter) => {
+              const active = filter.type === activeType;
+              return (
+                <TouchableOpacity
+                  key={filter.type}
+                  onPress={() => setActiveType(filter.type)}
+                  activeOpacity={0.85}
+                  style={[
                   styles.filterChip,
                   active && {
                     backgroundColor: filter.color,
@@ -388,28 +531,119 @@ export default function MapActivity() {
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
-      </View>
+          </ScrollView>
+        </View>
+      </Animated.View>
 
-      {/* SOS button */}
-      <TouchableOpacity
-        style={styles.sosButton}
-        onPress={handleSOS}
-        disabled={sosLoading}
-        activeOpacity={0.8}
+      {/* SOS button, floating above everything */}
+      <Animated.View
+        style={[styles.sosButtonWrap, { transform: [{ scale: sosPulse }] }]}
       >
-        {sosLoading ? (
-          <ActivityIndicator color="#FFFFFF" />
-        ) : (
-          <Text style={styles.sosText}>SOS</Text>
-        )}
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity
+          style={styles.sosButton}
+          onPress={openSosPicker}
+          disabled={sosLoading}
+          activeOpacity={0.8}
+        >
+          {sosLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.sosText}>SOS</Text>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* Which services do you need? */}
+      <Modal
+        visible={sosOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => !sosLoading && setSosOpen(false)}
+      >
+        <View style={styles.sheetBackdrop}>
+          <View style={styles.sheet}>
+            <Text style={styles.sheetTitle}>Who do you need?</Text>
+            <Text style={styles.sheetSubtitle}>
+              Choose the services to alert. Your emergency contacts are always
+              notified too.
+            </Text>
+
+            {SOS_SERVICES.map((svc) => {
+              const on = sosServices.includes(svc.key);
+              return (
+                <TouchableOpacity
+                  key={svc.key}
+                  activeOpacity={0.85}
+                  onPress={() => toggleService(svc.key)}
+                  style={[
+                    styles.serviceRow,
+                    on && { borderColor: svc.color, backgroundColor: `${svc.color}12` },
+                  ]}
+                >
+                  <View style={[styles.serviceIcon, { backgroundColor: `${svc.color}22` }]}>
+                    <Text style={styles.serviceEmoji}>{svc.emoji}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.serviceLabel}>{svc.label}</Text>
+                    <Text style={styles.serviceHint}>{svc.hint}</Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.check,
+                      on && { backgroundColor: svc.color, borderColor: svc.color },
+                    ]}
+                  >
+                    {on && <Text style={styles.checkMark}>✓</Text>}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+
+            <TouchableOpacity
+              onPress={() =>
+                setSosServices(allSelected ? [] : SOS_SERVICES.map((svc) => svc.key))
+              }
+              style={styles.allButton}
+            >
+              <Text style={styles.allButtonText}>
+                {allSelected ? "Clear selection" : "Select all services"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                (!sosServices.length || sosLoading) && styles.sendButtonDisabled,
+              ]}
+              onPress={sendSOS}
+              disabled={!sosServices.length || sosLoading}
+              activeOpacity={0.85}
+            >
+              {sosLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.sendButtonText}>
+                  {sosServices.length ? "Send SOS Alert" : "Choose at least one service"}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setSosOpen(false)}
+              disabled={sosLoading}
+              style={styles.cancelButton}
+            >
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
+  container: { flex: 1, backgroundColor: "#F5F6F8" },
   centered: {
     flex: 1,
     backgroundColor: "#FFFFFF",
@@ -421,20 +655,28 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: "700", color: "#111827", marginBottom: 6 },
   subtitle: { fontSize: 15, color: "#6B7280", textAlign: "center" },
 
-  // Filter dock - a floating rounded "shelf" that sits low on the screen,
-  // above the SOS button and right above the tab bar.
+  // Full-bleed map filling the whole tab — no rounded "box" card, no
+  // details panel below it. Just the map.
+  mapBox: {
+    flex: 1,
+    backgroundColor: "#E5E7EB",
+  },
+  map: { flex: 1, width: "100%", height: "100%" },
+
+  // Filter dock - a floating rounded "shelf" docked to the bottom edge of
+  // the map box itself.
   filterDock: {
     position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 132,
+    left: 12,
+    right: 12,
+    bottom: 12,
     backgroundColor: "#FFFFFF",
     borderRadius: 22,
     paddingVertical: 11,
     shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 16,
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 12,
     elevation: 6,
   },
   filterRow: {
@@ -453,9 +695,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   filterIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 8,
@@ -463,13 +705,13 @@ const styles = StyleSheet.create({
   filterIconWrapActive: {
     backgroundColor: "rgba(255,255,255,0.25)",
   },
-  filterEmoji: { fontSize: 14 },
-  filterLabel: { fontSize: 13, fontWeight: "600", color: "#374151" },
+  filterEmoji: { fontSize: 20 },
+  filterLabel: { fontSize: 14, fontWeight: "700", color: "#374151" },
   filterLabelActive: { color: "#FFFFFF" },
 
   loadingPill: {
     position: "absolute",
-    bottom: 200,
+    top: 12,
     alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
@@ -487,7 +729,7 @@ const styles = StyleSheet.create({
 
   errorPill: {
     position: "absolute",
-    bottom: 200,
+    top: 12,
     left: 24,
     right: 24,
     backgroundColor: "#FEE2E2",
@@ -497,13 +739,19 @@ const styles = StyleSheet.create({
   },
   errorText: { color: "#991B1B", fontSize: 13, textAlign: "center" },
 
-  sosButton: {
+  // Floats clearly above the filter dock (which sits at bottom:12 and is
+  // roughly 70px tall) so the two never visually merge into one blob.
+  sosButtonWrap: {
     position: "absolute",
-    bottom: 32,
-    alignSelf: "center",
-    width: 78,
-    height: 78,
-    borderRadius: 39,
+    bottom: 100,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  sosButton: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
     backgroundColor: "#DC2626",
     alignItems: "center",
     justifyContent: "center",
@@ -517,8 +765,57 @@ const styles = StyleSheet.create({
   },
   sosText: {
     color: "#FFFFFF",
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: "800",
     letterSpacing: 1,
   },
+
+  // SOS service picker
+  sheetBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  sheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    padding: 20,
+    paddingBottom: 30,
+  },
+  sheetTitle: { fontSize: 22, fontWeight: "900", color: "#111827" },
+  sheetSubtitle: { fontSize: 14, color: "#6B7280", lineHeight: 20, marginTop: 4, marginBottom: 16 },
+  serviceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+    marginBottom: 10,
+  },
+  serviceIcon: { width: 52, height: 52, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  serviceEmoji: { fontSize: 28 },
+  serviceLabel: { fontSize: 16, fontWeight: "800", color: "#111827" },
+  serviceHint: { fontSize: 12.5, color: "#6B7280", marginTop: 2 },
+  check: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: "#D1D5DB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkMark: { color: "#FFFFFF", fontWeight: "900", fontSize: 16 },
+  allButton: { alignSelf: "center", paddingVertical: 8, marginBottom: 6 },
+  allButtonText: { color: "#2563EB", fontWeight: "800", fontSize: 14.5 },
+  sendButton: {
+    backgroundColor: "#DC2626",
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sendButtonDisabled: { backgroundColor: "#FCA5A5" },
+  sendButtonText: { color: "#FFFFFF", fontWeight: "900", fontSize: 16.5 },
+  cancelButton: { alignItems: "center", paddingVertical: 14 },
+  cancelText: { color: "#6B7280", fontWeight: "700", fontSize: 15 },
 });
