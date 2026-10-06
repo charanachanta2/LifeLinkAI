@@ -19,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { themeFor } from "@/constants/agency";
 import { API } from "@/config/api";
 import { useAuth } from "@/context/AuthContext";
+import ModeSwitcher from "@/components/ModeSwitcher";
 
 // Profile tab for public-service accounts (police / hospital / fire
 // station / pharmacy). This used to send people to the civilian
@@ -161,6 +162,9 @@ export default function AgencyHomeScreen({ role }: { role: string }) {
             </View>
           </View>
 
+          {/* Switch to Civilian / other services */}
+          <ModeSwitcher />
+
           {/* Contact number */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Contact Number</Text>
@@ -223,6 +227,19 @@ export default function AgencyHomeScreen({ role }: { role: string }) {
                   {user?.location ? "Update My Location" : "Share My Location"}
                 </Text>
               )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Help */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Help</Text>
+            <TouchableOpacity
+              style={styles.linkRow}
+              onPress={() => router.push("/support" as any)}
+            >
+              <Ionicons name="chatbubbles-outline" size={22} color="#374151" />
+              <Text style={styles.linkText}>Help & Support</Text>
+              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
             </TouchableOpacity>
           </View>
 

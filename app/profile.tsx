@@ -31,6 +31,8 @@ import {
   useAuth,
 } from "@/context/AuthContext";
 
+import ModeSwitcher from "@/components/ModeSwitcher";
+
 
 // ============================================================
 // TYPES
@@ -1344,7 +1346,21 @@ function CivilianProfile() {
 
           ListFooterComponent={
             <View>
-            <View style={styles.legalCard}>
+            <View style={{ marginTop: 20 }}>
+              <ModeSwitcher />
+            </View>
+            <View style={[styles.legalCard, { marginTop: 0 }]}>
+              <TouchableOpacity
+                style={styles.legalRow}
+                onPress={() => router.push("/support" as any)}
+              >
+                <Ionicons name="chatbubbles-outline" size={22} color="#374151" />
+                <Text style={styles.legalText}>Help & Support</Text>
+                <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
+
+              <View style={styles.legalDivider} />
+
               <TouchableOpacity
                 style={styles.legalRow}
                 onPress={() => router.push("/privacy-policy" as any)}
@@ -1855,14 +1871,12 @@ const styles =
 // (emergency contacts, medical records...). Send them to their own
 // Profile tab instead.
 export default function Profile() {
-  const { user, isLoading, homeRoute } = useAuth();
+  const { user, isLoading, homeRoute, mode } = useAuth();
 
-  if (
-    !isLoading &&
-    user?.role &&
-    user.role !== "civilian" &&
-    user.role !== "admin"
-  ) {
+  // Keyed to the mode being shown, not the account role, so a police /
+  // hospital / fire / pharmacy account can still open the civilian profile
+  // while it is using LifeLink as a civilian.
+  if (!isLoading && user && mode !== "civilian") {
     return <Redirect href={homeRoute() as any} />;
   }
 

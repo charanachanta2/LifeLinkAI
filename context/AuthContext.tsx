@@ -12,6 +12,7 @@ import { registerForPushNotificationsAsync } from "@/utils/pushNotifications";
 const BASE_URL = "https://lifelink-backend-neon.vercel.app";
 const TOKEN_KEY = "lifelink_auth_token";
 const USER_KEY = "lifelink_auth_user";
+const MODE_KEY = "lifelink_active_mode";
 
 export type AuthUser = {
   id: string;
@@ -25,7 +26,28 @@ export type AuthUser = {
   orgName?: string;
   location?: { lat: number; lng: number } | null;
   hasPushToken?: boolean;
+  /** Hand-seeded demo accounts can jump between every public service. */
+  isDemo?: boolean;
 };
+
+/**
+ * Which "side" of LifeLink the person is looking at right now.
+ * A police (or any public-service) account can also use the app as a
+ * civilian - send an SOS, find help, use the Blood Bank - and switch back.
+ */
+export type AppMode =
+  | "civilian"
+  | "police"
+  | "hospital"
+  | "firestation"
+  | "pharmacy";
+
+export const SERVICE_MODES: AppMode[] = [
+  "police",
+  "hospital",
+  "firestation",
+  "pharmacy",
+];
 
 type AuthContextType = {
   token: string | null;
@@ -46,15 +68,20 @@ type AuthContextType = {
   authHeaders: () => Record<string, string>;
   refreshUser: () => Promise<void>;
   updateAgencyLocation: (lat: number, lng: number) => Promise<void>;
-  /** Route for the (tabs)-style group this user's role belongs in. */
+  /** Route for the (tabs)-style group of the mode the user is in right now. */
   homeRoute: () => string;
+  /** The mode being shown (civilian, or a public-service side). */
+  mode: AppMode;
+  /** Every mode this account may switch into (length 1 = no switcher). */
+  availableModes: AppMode[];
+  /** Switch mode. Resolves with the route to navigate to. */
+  switchMode: (next: AppMode) => Promise<string>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Maps a user's role to the tab group they should land on after login.
-function roleHomeRoute(role?: AuthUser["role"]): string {
-  switch (role) {
+function modeHomeRoute(mode: AppMode): string {
+  switch (mode) {
     case "police":
       return "/(police)";
     case "hospital":
@@ -63,29 +90,35 @@ function roleHomeRoute(role?: AuthUser["role"]): string {
       return "/(firestation)";
     case "pharmacy":
       return "/(pharmacy)";
-    case "civilian":
-    case "admin":
     default:
       return "/(tabs)";
   }
 }
 
+const isServiceMode = (v: unknown): v is AppMode =>
+  typeof v === "string" && SERVICE_MODES.includes(v as AppMode);
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [storedMode, setStoredMode] = useState<AppMode | null>(null);
 
   // On app boot: check SecureStore for an existing session.
   // This is what makes the user stay logged in across app restarts.
   useEffect(() => {
     (async () => {
       try {
-        const [storedToken, storedUser] = await Promise.all([
+        const [storedToken, storedUser, savedMode] = await Promise.all([
           SecureStore.getItemAsync(TOKEN_KEY),
           SecureStore.getItemAsync(USER_KEY),
+          SecureStore.getItemAsync(MODE_KEY),
         ]);
         if (storedToken) setToken(storedToken);
         if (storedUser) setUser(JSON.parse(storedUser));
+        if (savedMode === "civilian" || isServiceMode(savedMode)) {
+          setStoredMode(savedMode as AppMode);
+        }
       } catch (err) {
         console.warn("Failed to load stored session", err);
       } finally {
@@ -98,6 +131,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (newToken: string, newUser: AuthUser) => {
       await SecureStore.setItemAsync(TOKEN_KEY, newToken);
       await SecureStore.setItemAsync(USER_KEY, JSON.stringify(newUser));
+      // A fresh sign-in always starts on the account's own side.
+      await SecureStore.deleteItemAsync(MODE_KEY);
+      setStoredMode(null);
       setToken(newToken);
       setUser(newUser);
     },
@@ -192,6 +228,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     await SecureStore.deleteItemAsync(TOKEN_KEY);
     await SecureStore.deleteItemAsync(USER_KEY);
+    await SecureStore.deleteItemAsync(MODE_KEY);
+    setStoredMode(null);
     setToken(null);
     setUser(null);
   }, []);
@@ -242,7 +280,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [token]
   );
 
-  const homeRoute = useCallback(() => roleHomeRoute(user?.role), [user]);
+  // ---- Modes ---------------------------------------------------------------
+  // The account's real role (set by an admin / approval) never changes by
+  // toggling a mode: server-side permissions still follow `user.role`.
+  // Civilian mode only changes which screens are shown - the civilian
+  // endpoints (SOS, nearby, blood bank) are open to any signed-in account.
+  const ownMode: AppMode = isServiceMode(user?.role)
+    ? (user!.role as AppMode)
+    : "civilian";
+
+  const availableModes: AppMode[] = user?.isDemo
+    ? ["civilian", ...SERVICE_MODES]
+    : ownMode === "civilian"
+    ? ["civilian"]
+    : ["civilian", ownMode];
+
+  const mode: AppMode =
+    storedMode && availableModes.includes(storedMode) ? storedMode : ownMode;
+
+  const switchMode = useCallback(
+    async (next: AppMode) => {
+      if (!availableModes.includes(next)) {
+        throw new Error("This account can't use that mode.");
+      }
+
+      // Demo accounts jump between services for real, so the server's
+      // role (which gates the agency endpoints) has to follow.
+      if (user?.isDemo && next !== "civilian" && next !== user.role) {
+        const res = await fetch(`${BASE_URL}/api/auth/demo-switch-role`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ role: next }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body.message || "Could not switch role");
+        await SecureStore.setItemAsync(USER_KEY, JSON.stringify(body.user));
+        setUser(body.user);
+      }
+
+      await SecureStore.setItemAsync(MODE_KEY, next);
+      setStoredMode(next);
+      return modeHomeRoute(next);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [availableModes.join(","), token, user]
+  );
+
+  const homeRoute = useCallback(() => modeHomeRoute(mode), [mode]);
 
   return (
     <AuthContext.Provider
@@ -260,6 +347,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         refreshUser,
         updateAgencyLocation,
         homeRoute,
+        mode,
+        availableModes,
+        switchMode,
       }}
     >
       {children}

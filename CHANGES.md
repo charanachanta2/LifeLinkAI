@@ -1,5 +1,27 @@
 # LifeLink fixes — what changed
 
+## Update 4 — Google sign-in + EAS preview build
+- Added Google sign-in (`@react-native-google-signin/google-signin`) -> Firebase credential
+  -> `/api/auth/sync`. Buttons on login + register (`components/GoogleButton.tsx`).
+- Native module is loaded lazily: `npx expo start` + Expo Go still runs (Google button just
+  explains it needs the installed build). Email/password works everywhere.
+- `app.json`: google-signin, expo-location, expo-notifications plugins + `googleServicesFile`.
+- `eas.json`: removed the `development` (dev-client) profile; `preview` builds an APK.
+- New env: `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
+
+## Update 3 — Firebase Authentication, runs with plain `npx expo start`
+- Auth is now Firebase (email/password). `context/AuthContext.tsx` rewritten; the
+  `useAuth()` API (`authHeaders`, `user`, `token`, `logout`, ...) is unchanged, so no other
+  screen needed edits. `googleLogin`/`sendOtp` removed; `resetPassword` added.
+- New `config/firebase.ts` (reads `EXPO_PUBLIC_FIREBASE_*` from `.env`).
+- `login.tsx`: Firebase sign-in + "Forgot password?". `register.tsx`: OTP step removed.
+- Removed old auth: `utils/auth-storage.ts`, `/login` `/register` `/send-otp` `/google-login` calls.
+- Removed packages that forced a dev build / aren't used in code: `expo-dev-client`,
+  `react-native-background-actions`, `react-native-fast-tflite`,
+  `react-native-geolocation-service`, `react-native-sensors` (+ its patch),
+  and `utils/BackgroundCrashMonitor.ts`.
+- Not included (needs a dev build, not Expo Go): Google sign-in, phone-OTP sign-in.
+
 ## Update 2 — reverted to plain full-screen maps everywhere
 The box-shaped map card (on either account type) wasn't working out, so
 per your request I reverted it entirely:

@@ -13,77 +13,32 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { API } from "@/config/api";
+import GoogleButton from "@/components/GoogleButton";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Register() {
   const router = useRouter();
+  const { register, googleLogin } = useAuth();
 
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [otp, setOtp] = useState("");
   const [agreed, setAgreed] = useState(false);
 
-  const [otpSent, setOtpSent] = useState(false);
-  const [sendingOtp, setSendingOtp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-
-  const handleSendOtp = async () => {
-    setError("");
-    setMessage("");
-
-    if (!email) {
-      setError("Please enter your email first");
-      return;
-    }
-
-    setSendingOtp(true);
-    try {
-      const response = await fetch(API.sendOtp, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.message || "Could not send OTP");
-        setSendingOtp(false);
-        return;
-      }
-
-      setOtpSent(true);
-      setMessage("OTP sent! Check your email.");
-    } catch (err) {
-      setError("Could not reach the server. Check your connection.");
-    } finally {
-      setSendingOtp(false);
-    }
-  };
 
   const handleRegister = async () => {
     setError("");
-    setMessage("");
 
-    if (!name || !password || !confirmPassword) {
+    if (!name.trim() || !email.trim() || !password || !confirmPassword) {
       setError("Please fill in all required fields");
       return;
     }
     if (!agreed) {
       setError("Please accept the Terms & Conditions and Privacy Policy to continue");
-      return;
-    }
-    if (!otpSent) {
-      setError("Please send and enter the OTP first");
-      return;
-    }
-    if (!otp) {
-      setError("Please enter the OTP sent to your email");
       return;
     }
     if (password !== confirmPassword) {
@@ -97,32 +52,30 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const response = await fetch(API.register, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          username: username || undefined,
-          email,
-          password,
-          otp,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.message || "Registration failed");
-        setLoading(false);
-        return;
-      }
-
-      // Registration succeeded — send them to the real login flow so
-      // AuthContext (not a separate token store) owns the session.
-      router.replace("/login");
-    } catch (err) {
-      setError("Could not reach the server. Check your connection.");
+      // Creates the Firebase account, then the LifeLink profile on the
+      // backend (POST /api/auth/sync) and signs the person in.
+      await register(
+        name.trim(),
+        email.trim(),
+        password,
+        username.trim() || undefined
+      );
+      router.replace("/(tabs)");
+    } catch (err: any) {
+      setError(err.message || "Registration failed");
+    } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setError("");
+    try {
+      const profile = await googleLogin();
+      if (!profile) return;
+      router.replace("/");
+    } catch (err: any) {
+      setError(err.message || "Google sign-in failed");
     }
   };
 
@@ -170,44 +123,16 @@ export default function Register() {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Email</Text>
-              <View style={styles.row}>
-                <TextInput
-                  placeholder="Enter your email"
-                  placeholderTextColor="#9CA3AF"
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  editable={!otpSent}
-                  style={[styles.input, styles.rowInput]}
-                />
-                <TouchableOpacity
-                  style={[styles.otpButton, sendingOtp && styles.buttonDisabled]}
-                  onPress={handleSendOtp}
-                  disabled={sendingOtp || otpSent}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.otpButtonText}>
-                    {otpSent ? "Sent" : sendingOtp ? "Sending..." : "Send OTP"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              <TextInput
+                placeholder="Enter your email"
+                placeholderTextColor="#9CA3AF"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                style={styles.input}
+              />
             </View>
-
-            {otpSent && (
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Enter OTP</Text>
-                <TextInput
-                  placeholder="6-digit code"
-                  placeholderTextColor="#9CA3AF"
-                  value={otp}
-                  onChangeText={setOtp}
-                  keyboardType="number-pad"
-                  maxLength={6}
-                  style={styles.input}
-                />
-              </View>
-            )}
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password</Text>
@@ -234,7 +159,6 @@ export default function Register() {
             </View>
 
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
-            {message ? <Text style={styles.successText}>{message}</Text> : null}
 
             <View style={styles.consentRow}>
               <TouchableOpacity
@@ -279,6 +203,12 @@ export default function Register() {
                 {loading ? "Registering..." : "Register"}
               </Text>
             </TouchableOpacity>
+
+            <GoogleButton
+              onPress={handleGoogle}
+              disabled={loading}
+              label="Sign up with Google"
+            />
 
             <Link href="/login" asChild>
               <TouchableOpacity style={styles.linkWrap}>

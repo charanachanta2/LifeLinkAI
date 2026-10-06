@@ -12,20 +12,70 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { isFirebaseConfigured } from "@/config/firebase";
+import GoogleButton from "@/components/GoogleButton";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Login() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, googleLogin, resetPassword } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  const handleForgot = async () => {
+    setError("");
+    setMessage("");
+    if (!email.trim()) {
+      setError("Enter your email above, then tap Forgot password");
+      return;
+    }
+    try {
+      await resetPassword(email.trim());
+      setMessage("Password reset email sent. Check your inbox.");
+    } catch (err: any) {
+      setError(err.message || "Could not send reset email");
+    }
+  };
+
+  const handleGoogle = async () => {
+    setError("");
+    setMessage("");
+    try {
+      const profile = await googleLogin();
+      if (!profile) return; // closed the Google popup
+      routeByRole(profile.role);
+    } catch (err: any) {
+      setError(err.message || "Google sign-in failed");
+    }
+  };
+
+  const routeByRole = (role?: string) => {
+    switch (role) {
+      case "police":
+        router.replace("/(police)");
+        break;
+      case "hospital":
+        router.replace("/(hospital)");
+        break;
+      case "firestation":
+        router.replace("/(firestation)");
+        break;
+      case "pharmacy":
+        router.replace("/(pharmacy)");
+        break;
+      default:
+        router.replace("/(tabs)");
+    }
+  };
 
   const handleLogin = async () => {
     setError("");
+    setMessage("");
 
     if (!email || !password) {
       setError("Please enter your email and password");
@@ -34,27 +84,11 @@ export default function Login() {
 
     setLoading(true);
     try {
-      // login() lives in AuthContext — it handles the request, saves the
-      // session (SecureStore), and flips isLoggedIn to true. It also
-      // returns the logged-in user object so we can route by role below.
+      // login() signs in with Firebase, loads the LifeLink profile from the
+      // backend and returns it so we can route by role below.
       const loggedInUser = await login(email.trim(), password);
 
-      switch (loggedInUser?.role) {
-        case "police":
-          router.replace("/(police)");
-          break;
-        case "hospital":
-          router.replace("/(hospital)");
-          break;
-        case "firestation":
-          router.replace("/(firestation)");
-          break;
-        case "pharmacy":
-          router.replace("/(pharmacy)");
-          break;
-        default:
-          router.replace("/(tabs)");
-      }
+      routeByRole(loggedInUser?.role);
     } catch (err: any) {
       setError(err.message || "Invalid email or password");
     } finally {
@@ -107,7 +141,17 @@ export default function Login() {
               />
             </View>
 
+            <TouchableOpacity onPress={handleForgot} style={styles.forgotWrap}>
+              <Text style={styles.forgotText}>Forgot password?</Text>
+            </TouchableOpacity>
+
+            {!isFirebaseConfigured ? (
+              <Text style={styles.errorText}>
+                Firebase isn&apos;t configured. Fill in the EXPO_PUBLIC_FIREBASE_* values in .env and restart with npx expo start --clear.
+              </Text>
+            ) : null}
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {message ? <Text style={styles.successText}>{message}</Text> : null}
 
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
@@ -119,6 +163,8 @@ export default function Login() {
                 {loading ? "Logging in..." : "Log In"}
               </Text>
             </TouchableOpacity>
+
+            <GoogleButton onPress={handleGoogle} disabled={loading} />
 
             <Text style={styles.legalNote}>
               By logging in you agree to our{" "}
@@ -205,6 +251,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 3,
+  },
+  forgotWrap: { alignSelf: "flex-end", marginBottom: 12 },
+  forgotText: { color: "#2563EB", fontSize: 13.5, fontWeight: "600" },
+  successText: {
+    color: "#16A34A",
+    fontSize: 14,
+    marginBottom: 12,
+    textAlign: "center",
   },
   buttonDisabled: { backgroundColor: "#93C5FD", shadowOpacity: 0 },
   buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },

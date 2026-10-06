@@ -27,12 +27,17 @@ const USE_LOCAL_BACKEND = false;
 // BASE URL
 // ============================================================
 
-export const API_BASE_URL = USE_LOCAL_BACKEND
-  ? Platform.select({
-      web: `http://localhost:${LOCAL_PORT}`,
-      default: `http://${LOCAL_IP}:${LOCAL_PORT}`,
-    })!
-  : PRODUCTION_URL;
+// EXPO_PUBLIC_API_URL in .env (if set) wins over everything below, so you can
+// point the app at any backend without touching code.
+export const API_BASE_URL = (
+  process.env.EXPO_PUBLIC_API_URL ||
+  (USE_LOCAL_BACKEND
+    ? Platform.select({
+        web: `http://localhost:${LOCAL_PORT}`,
+        default: `http://${LOCAL_IP}:${LOCAL_PORT}`,
+      })!
+    : PRODUCTION_URL)
+).replace(/\/+$/, "");
 
 // ============================================================
 // API ENDPOINTS
@@ -43,13 +48,9 @@ export const API = {
   // AUTH
   // ==========================================================
 
-  sendOtp: `${API_BASE_URL}/api/auth/send-otp`,
-
-  register: `${API_BASE_URL}/api/auth/register`,
-
-  login: `${API_BASE_URL}/api/auth/login`,
-
-  googleLogin: `${API_BASE_URL}/api/auth/google-login`,
+  // Firebase handles sign-in on the device; this turns the Firebase ID
+  // token into / loads the LifeLink profile (role, phone, donor info).
+  sync: `${API_BASE_URL}/api/auth/sync`,
 
   me: `${API_BASE_URL}/api/auth/me`,
 
@@ -58,8 +59,6 @@ export const API = {
   // ==========================================================
 
   phone: `${API_BASE_URL}/api/auth/phone`,
-
-  verifyPhone: `${API_BASE_URL}/api/auth/verify-phone`,
 
   // ==========================================================
   // EMERGENCY

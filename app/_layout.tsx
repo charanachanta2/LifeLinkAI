@@ -40,6 +40,8 @@ function RootNavigator() {
 
       <Stack.Screen name="profile" />
 
+      <Stack.Screen name="support" />
+
       <Stack.Screen name="privacy-policy" />
 
       <Stack.Screen name="terms" />

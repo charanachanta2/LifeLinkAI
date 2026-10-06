@@ -1,2 +1,3 @@
-npx expo start --dev-client --tunnel
+npx expo start
+# if Metro caches old env/config:
 npx expo start --clear
