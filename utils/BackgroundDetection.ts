@@ -1,7 +1,8 @@
 import Constants from "expo-constants";
-import { Platform } from "react-native";
+import { Linking, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
+import { dlog } from "./DebugLog";
 import {
   isBackgroundMonitorActive,
   isBackgroundMonitorSupported,
@@ -27,6 +28,21 @@ export const SUPPORT_MESSAGES: Record<Exclude<BgSupport, "ok">, string> = {
   "no-native":
     "This build doesn't include background detection. Install the latest LifeLink build.",
 };
+
+/**
+ * Opens Android's "battery optimisation" list so the person can set LifeLink to
+ * "Not optimised / Unrestricted". Without it many phones stop delivering sensor
+ * data a few minutes after the screen turns off.
+ */
+export async function openBatteryOptimizationSettings() {
+  try {
+    await Linking.sendIntent("android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS");
+  } catch {
+    try {
+      await Linking.openSettings();
+    } catch {}
+  }
+}
 
 export async function getBackgroundPref(): Promise<boolean> {
   try {
@@ -92,12 +108,14 @@ export async function enableBackgroundDetection(): Promise<{
   }
 
   await setBackgroundPref(true);
+  dlog("✅ Background detection switched ON by the user");
   return { ok: true };
 }
 
 export async function disableBackgroundDetection() {
   await stopCrashMonitor();
   await setBackgroundPref(false);
+  dlog("🛑 Background detection switched OFF by the user");
 }
 
 /** Call once the user is logged in: re-starts the service if it was on. */
@@ -107,6 +125,10 @@ export async function restoreBackgroundDetection() {
   if (isBackgroundMonitorActive()) return;
 
   const loc = await Location.getForegroundPermissionsAsync();
-  if (loc.status !== "granted") return;
-  await startCrashMonitor();
+  if (loc.status !== "granted") {
+    dlog("⚠️ Background detection not restored: location permission missing");
+    return;
+  }
+  const ok = await startCrashMonitor();
+  dlog(ok ? "🔁 Background detection restored on app start" : "⚠️ Could not restore background detection");
 }

@@ -12,6 +12,10 @@ const PERMISSIONS = [
   "android.permission.WAKE_LOCK",
   "android.permission.ACCESS_FINE_LOCATION",
   "android.permission.ACCESS_COARSE_LOCATION",
+  // Lets the app be exempted from battery optimisation (keeps sensors alive
+  // with the screen off) and read sensors faster than 200 Hz if ever needed.
+  "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+  "android.permission.HIGH_SAMPLING_RATE_SENSORS",
 ];
 
 const SERVICE_NAME = "com.asterinet.react.bgactions.RNBackgroundActionsTask";

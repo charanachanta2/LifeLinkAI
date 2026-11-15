@@ -101,3 +101,15 @@ changes, merge just those lines instead of overwriting.
 ## Expo Go
 Works without errors: Google button shows (tap explains it needs the app build);
 Settings card shows the background switch disabled with a message.
+
+
+## Safety check ("Are you OK? tap within 10 seconds")  - NEW
+Crash detected (app open OR closed) -> "Are you OK?" notification with
+[I'm OK] / [Send help now] buttons, plus a full-screen prompt if the app is open.
+No answer in 10 s -> emergency contacts are emailed.
+
+New:      components/CrashCheckOverlay.tsx
+Changed:  utils/CrashNotifications.ts, utils/EmergencyManager.ts,
+          components/CrashDetectionBootstrap.tsx, components/BackgroundDetectionCard.tsx
+Needs the matching backend update (POST /api/emergency/crash-check, /:id/confirm).
+Test it without a crash: Settings -> "Test the safety check" (sends nothing).
