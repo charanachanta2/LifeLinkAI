@@ -2,19 +2,20 @@ import { Redirect } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { useAuth } from "@/context/AuthContext";
+import { LL } from "@/constants/lifelink-theme";
 
 export default function Index() {
-  const { isLoggedIn, isLoading } = useAuth();
+  const { isLoggedIn, isLoading, homeRoute } = useAuth();
 
   if (isLoading) {
     return (
       <View style={styles.splash}>
-        <ActivityIndicator size="large" color="#DC2626" />
+        <ActivityIndicator size="large" color={LL.danger} />
       </View>
     );
   }
 
-  return <Redirect href={isLoggedIn ? "/(tabs)" : "/login"} />;
+  return <Redirect href={isLoggedIn ? (homeRoute() as any) : "/login"} />;
 }
 
 const styles = StyleSheet.create({
@@ -22,6 +23,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "transparent",
   },
 });

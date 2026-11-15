@@ -3,16 +3,25 @@ import React from "react";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { withGlow } from "@/components/LLGlow";
+import { LL } from "@/constants/lifelink-theme";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
+      screenLayout={withGlow}
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+        sceneStyle: { backgroundColor: LL.bg },
+        tabBarActiveTintColor: LL.accent,
+        tabBarInactiveTintColor: LL.textMuted,
+        tabBarStyle: {
+          backgroundColor: LL.surface,
+          borderTopColor: LL.border,
+          borderTopWidth: 1,
+          borderTopLeftRadius: 22,
+          borderTopRightRadius: 22,
+        },
+        tabBarLabelStyle: { fontWeight: "700" },
         headerShown: false,
         tabBarButton: HapticTab,
       }}

@@ -1,69 +1,88 @@
-import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
-} from "@react-navigation/native";
+import React from "react";
 import { Stack } from "expo-router";
+import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  View,
+} from "react-native";
 import "react-native-reanimated";
 
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import { AuthProvider, useAuth } from "@/context/AuthContext";
+import {
+  AuthProvider,
+  useAuth,
+} from "@/context/AuthContext";
+import { withGlow } from "@/components/LLGlow";
+import CrashDetectionBootstrap from "@/components/CrashDetectionBootstrap";
+import { INTER_FONTS } from "@/components/ll-text";
+import { LL } from "@/constants/lifelink-theme";
 
-// This inner component reads the auth state and decides what to show.
-// It has to live INSIDE <AuthProvider> to access useAuth().
 function RootNavigator() {
   const { isLoading } = useAuth();
+  const [fontsLoaded, fontError] = useFonts(INTER_FONTS);
 
-  // Still checking SecureStore for a saved session — show a brief splash
-  // instead of flashing the login screen for a split second.
-  if (isLoading) {
+  if (isLoading || (!fontsLoaded && !fontError)) {
     return (
       <View style={styles.splash}>
-        <ActivityIndicator size="large" color="#DC2626" />
+        <ActivityIndicator
+          size="large"
+          color={LL.danger}
+        />
       </View>
     );
   }
 
   return (
-    <Stack>
-      <Stack.Screen name="index" options={{ headerShown: false }} />
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        animation: "slide_from_right",
+        contentStyle: { backgroundColor: LL.bg },
+      }}
+      screenLayout={withGlow}
+    >
+      <Stack.Screen name="index" />
+
+      <Stack.Screen name="register" />
+
+      <Stack.Screen name="login" />
+
+      <Stack.Screen name="dashboard" />
+
+      <Stack.Screen name="(tabs)" />
+
+      <Stack.Screen name="profile" />
+
+      <Stack.Screen name="privacy-policy" />
+
+      <Stack.Screen name="terms" />
+
+      {/* Emergency Screen */}
       <Stack.Screen
-        name="register"
-        options={{ title: "Register", headerShown: false }}
+        name="emergency"
+        options={{
+          headerShown: false,
+          animation: "fade",
+        }}
       />
-      <Stack.Screen name="spinner" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="login"
-        options={{ title: "Login", headerShown: false }}
-      />
-      <Stack.Screen
-        name="dashboard"
-        options={{ title: "Dashboard", headerShown: false }}
-      />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="profile"
-        options={{ title: "Profile", headerShown: false }}
-      />
+
       <Stack.Screen
         name="modal"
-        options={{ presentation: "modal", title: "Modal" }}
+        options={{
+          presentation: "modal",
+        }}
       />
     </Stack>
   );
 }
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <AuthProvider>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-        <RootNavigator />
-        <StatusBar style="auto" />
-      </ThemeProvider>
+      <RootNavigator />
+      <CrashDetectionBootstrap />
+      <StatusBar style="light" />
     </AuthProvider>
   );
 }
@@ -71,8 +90,8 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   splash: {
     flex: 1,
-    alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    backgroundColor: LL.bg,
   },
 });

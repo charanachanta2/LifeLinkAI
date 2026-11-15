@@ -1,79 +1,135 @@
-import { useCallback, useEffect, useState } from "react";
-import * as WebBrowser from "expo-web-browser";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+
 import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
 } from "react-native";
+import { Text } from "@/components/ll-text";
 
-import { BASE_URL, useAuth } from "@/context/AuthContext";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-// Where the "add / verify health records" flow lives. This is the portal
-// site (same one used for role approvals) - point it at wherever that ends
-// up deployed. Falls back to localhost for local dev.
-const PORTAL_URL =
-  process.env.EXPO_PUBLIC_PORTAL_URL || "https://lifelinkportalbackend.vercel.app/";
+import { API } from "@/config/api";
+import { useAuth } from "@/context/AuthContext";
+import { LL } from "@/constants/lifelink-theme";
 
-type RecommendationCategory =
-  | "nutrition"
-  | "exercise"
-  | "sleep"
-  | "mental"
-  | "general";
+// ============================================================
+// TYPES
+// ============================================================
 
-type Recommendation = {
-  category: RecommendationCategory;
+type AIRecommendation = {
+  category:
+    | "nutrition"
+    | "exercise"
+    | "sleep"
+    | "mental"
+    | "general";
+
   tip: string;
 };
 
-type HealthReport = {
-  status: "none" | "pending" | "ready";
-  summary?: string;
-  recommendations?: Recommendation[];
-  watchOutFor?: string[];
-  updatedAt?: string;
+type DoctorRecommendation = {
+  recordId: string;
+  hospitalName: string;
+  doctorName: string;
+  recordDate: string;
+  recommendation: string;
 };
 
-const CATEGORY_META: Record<
-  RecommendationCategory,
-  { emoji: string; label: string; color: string }
-> = {
-  nutrition: { emoji: "🥗", label: "Nutrition", color: "#059669" },
-  exercise: { emoji: "🏃", label: "Exercise", color: "#2563EB" },
-  sleep: { emoji: "😴", label: "Sleep", color: "#7C3AED" },
-  mental: { emoji: "🧠", label: "Mental Wellbeing", color: "#EA580C" },
-  general: { emoji: "💡", label: "General", color: "#4B5563" },
+type Measurements = {
+  bloodPressure: string | null;
+  heartRate: number | null;
+  bloodSugar: number | null;
+  weight: number | null;
 };
+
+type AnalyticsResponse =
+  | {
+      status: "none";
+    }
+  | {
+      status: "ready";
+
+      totalRecords: number;
+
+      summary: string;
+
+      measurements: Measurements;
+
+      doctorRecommendations: DoctorRecommendation[];
+
+      recommendations: AIRecommendation[];
+
+      watchOutFor: string[];
+
+      updatedAt: string;
+    };
+
+// ============================================================
+// ANALYTICS
+// ============================================================
 
 export default function Analytics() {
   const { token, authHeaders } = useAuth();
-  const [report, setReport] = useState<HealthReport | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const loadReport = useCallback(async () => {
-    if (!token) return;
-    setErrorMsg(null);
+  const [data, setData] =
+    useState<AnalyticsResponse | null>(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [refreshing, setRefreshing] =
+    useState(false);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  // ==========================================================
+  // LOAD ANALYTICS
+  // ==========================================================
+
+  const loadAnalytics = useCallback(async () => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    setError(null);
+
     try {
-      const res = await fetch(`${BASE_URL}/api/health/report`, {
-        headers: authHeaders(),
-      });
+      const response = await fetch(
+        API.healthReport,
+        {
+          method: "GET",
+          headers: authHeaders(),
+        }
+      );
 
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.message || "Failed to load your health report");
+      const body = await response
+        .json()
+        .catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          body.message ||
+            "Failed to load health analytics."
+        );
       }
 
-      const data: HealthReport = await res.json();
-      setReport(data);
+      setData(body as AnalyticsResponse);
     } catch (err: any) {
-      setErrorMsg(
-        err.message || "Something went wrong loading your health report.",
+      console.error(
+        "Health analytics error:",
+        err
+      );
+
+      setError(
+        err?.message ||
+          "Unable to load health analytics."
       );
     } finally {
       setLoading(false);
@@ -81,288 +137,1007 @@ export default function Analytics() {
     }
   }, [token, authHeaders]);
 
-  useEffect(() => {
-    loadReport();
-  }, [loadReport]);
+  // ==========================================================
+  // REFRESH WHEN TAB OPENS
+  // ==========================================================
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAnalytics();
+    }, [loadAnalytics])
+  );
+
+  // ==========================================================
+  // PULL TO REFRESH
+  // ==========================================================
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadReport();
+    loadAnalytics();
   };
 
-  const openPortal = async (path: string) => {
-    // Passing the token as a query param is a placeholder for local testing.
-    // Once the portal's health-records flow exists, swap this for a
-    // short-lived one-time link fetched from the backend instead of
-    // exposing the main session token in a URL.
-    const url = `${PORTAL_URL}${path}?token=${encodeURIComponent(
-      token ?? "",
-    )}`;
-    await WebBrowser.openBrowserAsync(url);
-    // The user may have added/updated records while the browser was open.
-    loadReport();
-  };
+  // ==========================================================
+  // LOADING
+  // ==========================================================
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#DC2626" />
-        <Text style={[styles.subtitle, { marginTop: 12 }]}>
-          Loading your analytics…
+      <SafeAreaView style={styles.centered} edges={["top", "left", "right"]}>
+        <ActivityIndicator
+          size="large"
+          color={LL.danger}
+        />
+
+        <Text style={styles.loadingText}>
+          Analyzing your health records...
         </Text>
-      </View>
+
+        <Text style={styles.loadingSubtext}>
+          LifeLink AI is preparing your health
+          overview.
+        </Text>
+      </SafeAreaView>
     );
   }
 
-  const status = report?.status ?? "none";
+  // ==========================================================
+  // UI
+  // ==========================================================
 
   return (
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
     <ScrollView
-      style={styles.container}
+      style={styles.scroll}
       contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={LL.danger}
+        />
       }
     >
-      <Text style={styles.heading}>Analytics</Text>
-      <Text style={styles.subheading}>
-        Your personalized health snapshot, based on the records you've added.
+      {/* HEADER */}
+
+      <Text style={styles.heading}>
+        Health Analytics
       </Text>
 
-      {errorMsg && (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{errorMsg}</Text>
-        </View>
-      )}
+      <Text style={styles.subheading}>
+        Your medical records, doctor guidance and
+        AI-generated health overview in one place.
+      </Text>
 
-      {status === "none" && (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyEmoji}>🩺</Text>
-          <Text style={styles.emptyTitle}>No health records yet</Text>
-          <Text style={styles.emptyText}>
-            Add and verify your health records on the LifeLink web portal.
-            We'll analyze them and give you a daily summary of what to do to
-            stay balanced.
-          </Text>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => openPortal("/health-records")}
-          >
-            <Text style={styles.primaryButtonText}>Add Health Records</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* ERROR */}
 
-      {status === "pending" && (
-        <View style={styles.emptyCard}>
-          <ActivityIndicator size="large" color="#DC2626" />
-          <Text style={[styles.emptyTitle, { marginTop: 16 }]}>
-            Analyzing your records
-          </Text>
-          <Text style={styles.emptyText}>
-            This usually takes a minute or two. Pull down to refresh, or
-            check back shortly.
+      {error && (
+        <View style={styles.errorCard}>
+          <Ionicons
+            name="alert-circle-outline"
+            size={22}
+            color={LL.danger}
+          />
+
+          <Text style={styles.errorText}>
+            {error}
           </Text>
         </View>
       )}
 
-      {status === "ready" && report && (
-        <>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Summary</Text>
-            <Text style={styles.summaryText}>{report.summary}</Text>
-            {report.updatedAt && (
-              <Text style={styles.updatedText}>
-                Last updated{" "}
-                {new Date(report.updatedAt).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </Text>
-            )}
+      {/* NO RECORDS */}
+
+      {!error &&
+        data?.status === "none" && (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyEmoji}>
+              🩺
+            </Text>
+
+            <Text style={styles.emptyTitle}>
+              No health data yet
+            </Text>
+
+            <Text style={styles.emptyText}>
+              When your hospital adds medical
+              reports to your LifeLink account,
+              your analytics and AI health
+              summary will appear here.
+            </Text>
           </View>
+        )}
 
-          {report.recommendations && report.recommendations.length > 0 && (
-            <>
-              <Text style={styles.sectionTitle}>Daily Recommendations</Text>
-              {report.recommendations.map((rec, idx) => {
-                const meta = CATEGORY_META[rec.category] ?? CATEGORY_META.general;
-                return (
-                  <View key={idx} style={styles.recCard}>
+      {/* READY */}
+
+      {!error &&
+        data?.status === "ready" && (
+          <>
+            {/* OVERVIEW */}
+
+            <View style={styles.overviewCard}>
+              <View style={styles.overviewTop}>
+                <View>
+                  <Text style={styles.overviewLabel}>
+                    CONNECTED HEALTH RECORDS
+                  </Text>
+
+                  <Text style={styles.overviewNumber}>
+                    {data.totalRecords}
+                  </Text>
+                </View>
+
+                <View style={styles.overviewIcon}>
+                  <Ionicons
+                    name="document-text-outline"
+                    size={25}
+                    color={LL.white}
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.overviewText}>
+                {data.totalRecords === 1
+                  ? "1 medical record is"
+                  : `${data.totalRecords} medical records are`}{" "}
+                connected to your LifeLink account.
+              </Text>
+            </View>
+
+            {/* ==================================================
+                MEASUREMENTS
+            ================================================== */}
+
+            <SectionHeading
+              icon="pulse-outline"
+              title="Latest Measurements"
+            />
+
+            <View style={styles.measurementGrid}>
+              <MeasurementCard
+                icon="heart-outline"
+                label="Blood Pressure"
+                value={
+                  data.measurements
+                    .bloodPressure || "—"
+                }
+                unit=""
+              />
+
+              <MeasurementCard
+                icon="pulse-outline"
+                label="Heart Rate"
+                value={
+                  data.measurements
+                    .heartRate ?? "—"
+                }
+                unit={
+                  data.measurements
+                    .heartRate !== null
+                    ? "bpm"
+                    : ""
+                }
+              />
+
+              <MeasurementCard
+                icon="water-outline"
+                label="Blood Sugar"
+                value={
+                  data.measurements
+                    .bloodSugar ?? "—"
+                }
+                unit={
+                  data.measurements
+                    .bloodSugar !== null
+                    ? "mg/dL"
+                    : ""
+                }
+              />
+
+              <MeasurementCard
+                icon="body-outline"
+                label="Weight"
+                value={
+                  data.measurements.weight ??
+                  "—"
+                }
+                unit={
+                  data.measurements.weight !==
+                  null
+                    ? "kg"
+                    : ""
+                }
+              />
+            </View>
+
+            {/* ==================================================
+                DOCTOR RECOMMENDATIONS
+            ================================================== */}
+
+            <SectionHeading
+              icon="medkit-outline"
+              title="Doctor Recommendations"
+            />
+
+            {data.doctorRecommendations
+              .length === 0 ? (
+              <View
+                style={styles.noRecommendation}
+              >
+                <Ionicons
+                  name="information-circle-outline"
+                  size={20}
+                  color={LL.textMuted}
+                />
+
+                <Text
+                  style={
+                    styles.noRecommendationText
+                  }
+                >
+                  No recommendations have been
+                  added by your healthcare
+                  providers yet.
+                </Text>
+              </View>
+            ) : (
+              data.doctorRecommendations.map(
+                (item) => (
+                  <View
+                    key={item.recordId}
+                    style={
+                      styles.doctorCard
+                    }
+                  >
                     <View
-                      style={[
-                        styles.recIconWrap,
-                        { backgroundColor: `${meta.color}1A` },
-                      ]}
+                      style={
+                        styles.doctorHeader
+                      }
                     >
-                      <Text style={styles.recEmoji}>{meta.emoji}</Text>
+                      <View
+                        style={
+                          styles.doctorIcon
+                        }
+                      >
+                        <Ionicons
+                          name="medical-outline"
+                          size={20}
+                          color={LL.danger}
+                        />
+                      </View>
+
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={
+                            styles.doctorHospital
+                          }
+                        >
+                          {item.hospitalName ||
+                            "Healthcare Provider"}
+                        </Text>
+
+                        {item.doctorName ? (
+                          <Text
+                            style={
+                              styles.doctorName
+                            }
+                          >
+                            {item.doctorName}
+                          </Text>
+                        ) : null}
+
+                        {item.recordDate ? (
+                          <Text
+                            style={
+                              styles.doctorDate
+                            }
+                          >
+                            {item.recordDate}
+                          </Text>
+                        ) : null}
+                      </View>
                     </View>
+
+                    <Text
+                      style={
+                        styles.doctorRecommendation
+                      }
+                    >
+                      {item.recommendation}
+                    </Text>
+                  </View>
+                )
+              )
+            )}
+
+            {/* ==================================================
+                AI SUMMARY
+            ================================================== */}
+
+            <SectionHeading
+              icon="sparkles-outline"
+              title="AI Health Summary"
+            />
+
+            <View style={styles.aiCard}>
+              <View style={styles.aiHeading}>
+                <View style={styles.aiIcon}>
+                  <Ionicons
+                    name="sparkles"
+                    size={20}
+                    color={LL.white}
+                  />
+                </View>
+
+                <View>
+                  <Text style={styles.aiTitle}>
+                    LifeLink AI
+                  </Text>
+
+                  <Text
+                    style={styles.aiSubtitle}
+                  >
+                    Based on your connected
+                    health records
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.aiText}>
+                {data.summary}
+              </Text>
+            </View>
+
+            {/* ==================================================
+                AI RECOMMENDATIONS
+            ================================================== */}
+
+            <SectionHeading
+              icon="bulb-outline"
+              title="AI Wellness Suggestions"
+            />
+
+            {data.recommendations.length ===
+            0 ? (
+              <View
+                style={styles.noRecommendation}
+              >
+                <Text
+                  style={
+                    styles.noRecommendationText
+                  }
+                >
+                  No additional wellness
+                  suggestions are available.
+                </Text>
+              </View>
+            ) : (
+              data.recommendations.map(
+                (recommendation, index) => (
+                  <View
+                    key={`${recommendation.category}-${index}`}
+                    style={
+                      styles.aiRecommendationCard
+                    }
+                  >
+                    <View
+                      style={
+                        styles.categoryIcon
+                      }
+                    >
+                      <Ionicons
+                        name={getCategoryIcon(
+                          recommendation.category
+                        )}
+                        size={19}
+                        color={LL.warningText}
+                      />
+                    </View>
+
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.recCategory, { color: meta.color }]}>
-                        {meta.label}
+                      <Text
+                        style={
+                          styles.categoryTitle
+                        }
+                      >
+                        {formatCategory(
+                          recommendation.category
+                        )}
                       </Text>
-                      <Text style={styles.recTip}>{rec.tip}</Text>
+
+                      <Text
+                        style={
+                          styles.recommendationText
+                        }
+                      >
+                        {recommendation.tip}
+                      </Text>
                     </View>
                   </View>
-                );
-              })}
-            </>
-          )}
+                )
+              )
+            )}
 
-          {report.watchOutFor && report.watchOutFor.length > 0 && (
-            <View style={styles.watchCard}>
-              <Text style={styles.watchTitle}>⚠️ Keep an eye on</Text>
-              {report.watchOutFor.map((item, idx) => (
-                <Text key={idx} style={styles.watchItem}>
-                  •  {item}
-                </Text>
-              ))}
+            {/* ==================================================
+                WATCH OUT
+            ================================================== */}
+
+            {data.watchOutFor.length > 0 && (
+              <>
+                <SectionHeading
+                  icon="eye-outline"
+                  title="Keep an Eye On"
+                />
+
+                <View
+                  style={styles.watchCard}
+                >
+                  {data.watchOutFor.map(
+                    (item, index) => (
+                      <View
+                        key={index}
+                        style={[
+                          styles.watchRow,
+                          index ===
+                            data.watchOutFor
+                              .length -
+                              1 &&
+                            styles.watchRowLast,
+                        ]}
+                      >
+                        <Ionicons
+                          name="alert-circle-outline"
+                          size={19}
+                          color={LL.warningText}
+                        />
+
+                        <Text
+                          style={
+                            styles.watchText
+                          }
+                        >
+                          {item}
+                        </Text>
+                      </View>
+                    )
+                  )}
+                </View>
+              </>
+            )}
+
+            {/* DISCLAIMER */}
+
+            <View style={styles.disclaimer}>
+              <Ionicons
+                name="information-circle-outline"
+                size={18}
+                color={LL.textMuted}
+              />
+
+              <Text
+                style={styles.disclaimerText}
+              >
+                LifeLink AI provides
+                informational summaries and
+                general wellness suggestions.
+                It does not replace advice from
+                a qualified healthcare
+                professional.
+              </Text>
             </View>
-          )}
-
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => openPortal("/health-records")}
-          >
-            <Text style={styles.secondaryButtonText}>Update Health Records</Text>
-          </TouchableOpacity>
-        </>
-      )}
+          </>
+        )}
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
+// ============================================================
+// SECTION HEADING
+// ============================================================
+
+function SectionHeading({
+  icon,
+  title,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+}) {
+  return (
+    <View style={styles.sectionHeading}>
+      <Ionicons
+        name={icon}
+        size={20}
+        color={LL.text}
+      />
+
+      <Text style={styles.sectionTitle}>
+        {title}
+      </Text>
+    </View>
+  );
+}
+
+// ============================================================
+// MEASUREMENT CARD
+// ============================================================
+
+function MeasurementCard({
+  icon,
+  label,
+  value,
+  unit,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string | number;
+  unit: string;
+}) {
+  return (
+    <View style={styles.measurementCard}>
+      <View style={styles.measurementIcon}>
+        <Ionicons
+          name={icon}
+          size={21}
+          color={LL.danger}
+        />
+      </View>
+
+      <Text style={styles.measurementLabel}>
+        {label}
+      </Text>
+
+      <Text style={styles.measurementValue}>
+        {value}
+      </Text>
+
+      {unit ? (
+        <Text style={styles.measurementUnit}>
+          {unit}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+function formatCategory(category: string) {
+  switch (category) {
+    case "nutrition":
+      return "Nutrition";
+
+    case "exercise":
+      return "Exercise";
+
+    case "sleep":
+      return "Sleep";
+
+    case "mental":
+      return "Mental Wellness";
+
+    default:
+      return "General Wellness";
+  }
+}
+
+function getCategoryIcon(
+  category: string
+): keyof typeof Ionicons.glyphMap {
+  switch (category) {
+    case "nutrition":
+      return "nutrition-outline";
+
+    case "exercise":
+      return "fitness-outline";
+
+    case "sleep":
+      return "moon-outline";
+
+    case "mental":
+      return "happy-outline";
+
+    default:
+      return "bulb-outline";
+  }
+}
+
+// ============================================================
+// STYLES
+// ============================================================
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  content: { padding: 20, paddingBottom: 48 },
+  container: {
+    flex: 1,
+    backgroundColor: "transparent",
+  },
+
+  scroll: {
+    flex: 1,
+  },
+
+  content: {
+    padding: 20,
+    paddingTop: 12,
+    paddingBottom: 60,
+  },
+
   centered: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: 30,
+    backgroundColor: LL.surface,
   },
-  subtitle: { fontSize: 15, color: "#6B7280", textAlign: "center" },
 
-  heading: { fontSize: 26, fontWeight: "800", color: "#111827" },
+  loadingText: {
+    marginTop: 14,
+    fontSize: 15,
+    fontWeight: "600",
+    color: LL.textSoft,
+  },
+
+  loadingSubtext: {
+    marginTop: 5,
+    fontSize: 12,
+    color: LL.textDim,
+    textAlign: "center",
+  },
+
+  heading: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: LL.text,
+  },
+
   subheading: {
+    marginTop: 6,
+    marginBottom: 24,
     fontSize: 14,
-    color: "#6B7280",
-    marginTop: 4,
-    marginBottom: 20,
+    lineHeight: 20,
+    color: LL.textMuted,
   },
 
-  errorBanner: {
-    backgroundColor: "#FEE2E2",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
+  errorCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 15,
+    backgroundColor: LL.dangerSoft,
+    borderRadius: 14,
   },
-  errorText: { color: "#991B1B", fontSize: 13, textAlign: "center" },
+
+  errorText: {
+    flex: 1,
+    marginLeft: 9,
+    fontSize: 13,
+    color: LL.dangerText,
+  },
 
   emptyCard: {
     alignItems: "center",
-    backgroundColor: "#F9FAFB",
-    borderRadius: 16,
-    padding: 28,
-    marginTop: 12,
-  },
-  emptyEmoji: { fontSize: 40, marginBottom: 12 },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 6,
-    textAlign: "center",
-  },
-  emptyText: {
-    fontSize: 14,
-    color: "#6B7280",
-    textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 20,
+    marginTop: 15,
+    padding: 32,
+    backgroundColor: LL.elevated,
+    borderRadius: 18,
   },
 
-  primaryButton: {
-    backgroundColor: "#DC2626",
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 12,
-  },
-  primaryButtonText: { color: "#FFFFFF", fontWeight: "700", fontSize: 15 },
-
-  secondaryButton: {
-    marginTop: 24,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  secondaryButtonText: { color: "#111827", fontWeight: "700", fontSize: 14 },
-
-  summaryCard: {
-    backgroundColor: "#111827",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-  },
-  summaryLabel: {
-    color: "#9CA3AF",
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
-  summaryText: { color: "#F9FAFB", fontSize: 15, lineHeight: 22 },
-  updatedText: { color: "#6B7280", fontSize: 12, marginTop: 12 },
-
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
+  emptyEmoji: {
+    fontSize: 44,
     marginBottom: 12,
   },
 
-  recCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: "#F9FAFB",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: LL.text,
   },
-  recIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+
+  emptyText: {
+    marginTop: 8,
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: "center",
+    color: LL.textMuted,
+  },
+
+  overviewCard: {
+    marginBottom: 28,
+    padding: 20,
+    backgroundColor: LL.surface,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 14,
+    elevation: 4,
+  },
+
+  overviewTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+
+  overviewLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.7,
+    color: LL.textDim,
+  },
+
+  overviewNumber: {
+    marginTop: 4,
+    fontSize: 38,
+    fontWeight: "800",
+    color: LL.white,
+  },
+
+  overviewIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: LL.danger,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
   },
-  recEmoji: { fontSize: 17 },
-  recCategory: {
+
+  overviewText: {
+    marginTop: 3,
+    fontSize: 13,
+    color: LL.textDim,
+  },
+
+  sectionHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+    marginBottom: 13,
+  },
+
+  sectionTitle: {
+    marginLeft: 8,
+    fontSize: 17,
+    fontWeight: "800",
+    color: LL.text,
+  },
+
+  measurementGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginBottom: 23,
+  },
+
+  measurementCard: {
+    width: "48%",
+    marginBottom: 12,
+    padding: 16,
+    backgroundColor: LL.elevated,
+    borderWidth: 1,
+    borderColor: LL.border,
+    borderRadius: 18,
+    shadowColor: "#000",
+    shadowOpacity: 0.03,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 1,
+  },
+
+  measurementIcon: {
+    width: 36,
+    height: 36,
+    marginBottom: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: LL.dangerSoft,
+    borderRadius: 11,
+  },
+
+  measurementLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: LL.textMuted,
+  },
+
+  measurementValue: {
+    marginTop: 4,
+    fontSize: 20,
+    fontWeight: "800",
+    color: LL.text,
+  },
+
+  measurementUnit: {
+    marginTop: 1,
+    fontSize: 10,
+    color: LL.textDim,
+  },
+
+  noRecommendation: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 25,
+    padding: 16,
+    backgroundColor: LL.elevated,
+    borderRadius: 14,
+  },
+
+  noRecommendationText: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 13,
+    lineHeight: 19,
+    color: LL.textMuted,
+  },
+
+  doctorCard: {
+    marginBottom: 13,
+    padding: 16,
+    backgroundColor: LL.dangerSoft,
+    borderWidth: 1,
+    borderColor: LL.dangerBorder,
+    borderRadius: 16,
+  },
+
+  doctorHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+
+  doctorIcon: {
+    width: 40,
+    height: 40,
+    marginRight: 10,
+    borderRadius: 12,
+    backgroundColor: LL.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  doctorHospital: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: LL.dangerText,
+  },
+
+  doctorName: {
+    marginTop: 2,
     fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
-    marginBottom: 2,
+    fontWeight: "600",
+    color: LL.dangerText,
   },
-  recTip: { fontSize: 14, color: "#374151", lineHeight: 19 },
+
+  doctorDate: {
+    marginTop: 2,
+    fontSize: 10,
+    color: LL.textDim,
+  },
+
+  doctorRecommendation: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: LL.dangerText,
+  },
+
+  aiCard: {
+    marginBottom: 25,
+    padding: 18,
+    backgroundColor: LL.surface,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 14,
+    elevation: 4,
+  },
+
+  aiHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+
+  aiIcon: {
+    width: 38,
+    height: 38,
+    marginRight: 10,
+    borderRadius: 12,
+    backgroundColor: LL.danger,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  aiTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: LL.white,
+  },
+
+  aiSubtitle: {
+    marginTop: 2,
+    fontSize: 10,
+    color: LL.textDim,
+  },
+
+  aiText: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: LL.text,
+  },
+
+  aiRecommendationCard: {
+    flexDirection: "row",
+    marginBottom: 11,
+    padding: 15,
+    backgroundColor: LL.warningSoft,
+    borderRadius: 15,
+  },
+
+  categoryIcon: {
+    width: 38,
+    height: 38,
+    marginRight: 11,
+    borderRadius: 11,
+    backgroundColor: LL.warningSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  categoryTitle: {
+    marginBottom: 3,
+    fontSize: 12,
+    fontWeight: "800",
+    color: LL.warningText,
+  },
+
+  recommendationText: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: LL.warningText,
+  },
 
   watchCard: {
-    backgroundColor: "#FFFBEB",
+    marginBottom: 25,
+    paddingHorizontal: 15,
+    backgroundColor: LL.warningSoft,
+    borderRadius: 15,
+  },
+
+  watchRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: LL.warningBorder,
+  },
+
+  watchRowLast: {
+    borderBottomWidth: 0,
+  },
+
+  watchText: {
+    flex: 1,
+    marginLeft: 9,
+    fontSize: 13,
+    lineHeight: 19,
+    color: LL.warningText,
+  },
+
+  disclaimer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginTop: 10,
+    padding: 14,
+    backgroundColor: LL.elevated,
     borderRadius: 14,
-    padding: 16,
-    marginTop: 8,
   },
-  watchTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#92400E",
-    marginBottom: 8,
+
+  disclaimerText: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 11,
+    lineHeight: 17,
+    color: LL.textMuted,
   },
-  watchItem: { fontSize: 13, color: "#92400E", lineHeight: 20 },
 });

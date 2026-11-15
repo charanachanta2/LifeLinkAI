@@ -4,26 +4,26 @@
  */
 
 import { Platform } from 'react-native';
-
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+import { LL } from './lifelink-theme';
 
 export const Colors = {
+  // LifeLink is dark-only (black / green / red, like the website), so both
+  // schemes share the same palette.
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    text: LL.text,
+    background: LL.bg,
+    tint: LL.accent,
+    icon: LL.textMuted,
+    tabIconDefault: LL.textMuted,
+    tabIconSelected: LL.accent,
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    text: LL.text,
+    background: LL.bg,
+    tint: LL.accent,
+    icon: LL.textMuted,
+    tabIconDefault: LL.textMuted,
+    tabIconSelected: LL.accent,
   },
 };
 

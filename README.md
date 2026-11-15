@@ -1,50 +1,38 @@
-# Welcome to your Expo app 👋
+# LifeLink — changes (extract over your project folder)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Extract this zip INTO your project root (D:\ProjectsMain\LifeLink) and allow overwrite.
+It only contains files that changed, so your newer files (config/firebase.ts,
+profile.tsx, etc.) are not touched.
 
-## Get started
+## Files
+- app/login.tsx                    Google button (Expo-Go safe)
+- context/AuthContext.tsx          googleLogin now returns the user
+- config/google.ts                 reads EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
+- plugins/withBackgroundDetection.js   Android manifest setup (service type + permissions)
+- utils/BackgroundCrashMonitor.ts, BackgroundDetection.ts, CrashNotifications.ts,
+  EmergencyManager.ts, SensorManager.ts   background accident detection
+- components/BackgroundDetectionCard.tsx, CrashDetectionBootstrap.tsx
+- app.json                         MERGE, don't blindly overwrite if you changed yours:
+    * android.googleServicesFile = ./google-services.json
+    * ios.bundleIdentifier = com.charanachanta2.LifeLink
+    * plugins += "@react-native-google-signin/google-signin", "./plugins/withBackgroundDetection"
 
-1. Install dependencies
+## app/_layout.tsx and app/profile.tsx (edits already applied)
+Both files are included with the two additions done (<CrashDetectionBootstrap />
+in _layout, <BackgroundDetectionCard /> in profile, above Emergency Contacts).
+They are based on the project zip you sent. If your local copies have extra
+changes, merge just those lines instead of overwriting.
 
-   ```bash
-   npm install
-   ```
+## Install (once)
+   npx expo install @react-native-google-signin/google-signin
+   (expo-notifications, expo-location, expo-sensors, expo-constants,
+    @react-native-async-storage/async-storage and react-native-background-actions
+    are already in your package.json)
 
-2. Start the app
+## Build (once, after Firebase setup)
+   eas build --platform android --profile development
+   then: npx expo start --dev-client
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Expo Go
+Works without errors: Google button shows (tap explains it needs the app build);
+Settings card shows the background switch disabled with a message.

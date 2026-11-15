@@ -6,21 +6,21 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "lifelink",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.charanachanta2.LifeLink"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0F9D63",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.charanachanta2.LifeLink"
+      "package": "com.charanachanta2.LifeLink",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",
@@ -34,13 +34,19 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
+          "backgroundColor": "#050605",
           "dark": {
-            "backgroundColor": "#000000"
+            "backgroundColor": "#050605"
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-font",
+      "expo-image",
+      "expo-status-bar",
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin",
+      "./plugins/withBackgroundDetection"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -51,6 +57,7 @@
       "eas": {
         "projectId": "21e58c2c-7d4c-49be-8363-a84a588a07d6"
       }
-    }
+    },
+    "backgroundColor": "#050605"
   }
 }
